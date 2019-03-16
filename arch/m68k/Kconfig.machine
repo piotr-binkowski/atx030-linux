@@ -133,6 +133,14 @@ config SUN3
 
 	  If you don't want to compile a kernel exclusively for a Sun 3, say N.
 
+config SBC030
+	bool "SBC030 support"
+	depends on MMU
+	select MMU_MOTOROLA if MMU
+	select M68030
+	help
+	  Support for the SBC030
+
 endif # M68KCLASSIC
 
 config PILOT

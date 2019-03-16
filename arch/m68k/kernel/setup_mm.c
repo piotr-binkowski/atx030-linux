@@ -121,6 +121,7 @@ extern int mvme16x_parse_bootinfo(const struct bi_record *);
 extern int mvme147_parse_bootinfo(const struct bi_record *);
 extern int hp300_parse_bootinfo(const struct bi_record *);
 extern int apollo_parse_bootinfo(const struct bi_record *);
+extern int sbc030_parse_bootinfo(const struct bi_record *);
 
 extern void config_amiga(void);
 extern void config_atari(void);
@@ -133,6 +134,7 @@ extern void config_bvme6000(void);
 extern void config_hp300(void);
 extern void config_q40(void);
 extern void config_sun3x(void);
+extern void config_sbc030(void);
 
 #define MASK_256K 0xfffc0000
 
@@ -202,6 +204,8 @@ static void __init m68k_parse_bootinfo(const struct bi_record *record)
 				unknown = hp300_parse_bootinfo(record);
 			else if (MACH_IS_APOLLO)
 				unknown = apollo_parse_bootinfo(record);
+			else if (MACH_IS_SBC030)
+				unknown = sbc030_parse_bootinfo(record);
 			else
 				unknown = 1;
 		}
@@ -325,6 +329,11 @@ void __init setup_arch(char **cmdline_p)
 #ifdef CONFIG_Q40
 	case MACH_Q40:
 		config_q40();
+		break;
+#endif
+#ifdef CONFIG_SBC030
+	case MACH_SBC030:
+		config_sbc030();
 		break;
 #endif
 #ifdef CONFIG_SUN3X

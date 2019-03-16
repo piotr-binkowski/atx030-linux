@@ -18,6 +18,13 @@ source "drivers/tty/serial/8250/Kconfig"
 
 comment "Non-8250 serial port support"
 
+config SERIAL_MC68681
+	bool "MC68681"
+	select SERIAL_CORE
+	select SERIAL_CORE_CONSOLE
+	help
+	  "This selects MC68681 DUART"
+
 config SERIAL_AMBA_PL010
 	tristate "ARM AMBA PL010 serial port support"
 	depends on ARM_AMBA
