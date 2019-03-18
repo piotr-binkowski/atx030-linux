@@ -21,8 +21,8 @@
 #define UART_ISR 11
 #define PORT_MC68681 114
 
-#define INFO() pr_notice("%s:%d", __func__, __LINE__)
-//#define INFO()
+//#define INFO() pr_notice("%s:%d", __func__, __LINE__)
+#define INFO()
 
 static struct uart_port ports[1];
 
