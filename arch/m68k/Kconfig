@@ -72,7 +72,6 @@ config ZONE_DMA
 config HZ
 	int
 	default 1000 if CLEOPATRA
-	default 1000 if SBC030
 	default 100
 
 config PGTABLE_LEVELS
