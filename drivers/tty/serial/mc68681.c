@@ -108,7 +108,7 @@ static int mc68681_startup(struct uart_port *port)
 
 	ret = request_irq(port->irq, mc68681_irq_handler, IRQF_SHARED, DRIVER_NAME, port);
 
-	iowrite8(0x0A, port->mapbase + UART_ISR);
+	iowrite8(0x02, port->mapbase + UART_ISR);
 
 	return ret;
 }

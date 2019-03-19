@@ -107,19 +107,19 @@ static irq_handler_t sbc030_timer_routine;
 
 static irqreturn_t sbc030_timer_irq(int irq, void * dev)
 {
-
-	if(ioread8((void*)SBC030_DUART_ISR) & 0x08){
-		ioread8((void*)SBC030_DUART_STOP);
-		return sbc030_timer_routine(irq, dev);
-	} else {
-		return IRQ_NONE;
-	}
+	iowrite8(0x01, (void*)SBC030_PIT_TSR);
+	return sbc030_timer_routine(irq, dev);
 }
 
 void sbc030_sched_init(irq_handler_t timer_routine)
 {
 	sbc030_timer_routine = timer_routine;
-	if(request_irq(IRQ_AUTO_1, sbc030_timer_irq, IRQF_SHARED, "timer", &sbc030_timer_routine))
+	iowrite8(0x00, (void*)SBC030_PIT_TCR);
+	iowrite8(0x00, (void*)SBC030_PIT_CPRH);
+	iowrite8(0x04, (void*)SBC030_PIT_CPRM);
+	iowrite8(0x80, (void*)SBC030_PIT_CPRL);
+	iowrite8(0xe1, (void*)SBC030_PIT_TCR);
+	if(request_irq(IRQ_AUTO_2, sbc030_timer_irq, 0, "timer", NULL))
 		panic("could not register timer irq");
 }
 
