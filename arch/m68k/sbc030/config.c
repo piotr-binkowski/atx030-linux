@@ -67,6 +67,24 @@ static struct platform_device spi1_device = {
 	.resource = spi1_res,
 };
 
+static struct spi_board_info sbc030_spi_info[] = {
+	{
+		.modalias = "enc28j60",
+		.mode = SPI_MODE_0,
+		.irq = IRQ_AUTO_3,
+		.max_speed_hz = 20000000,
+		.bus_num = 1,
+		.chip_select = 0,
+	},
+	{
+		.modalias = "mmc_spi",
+		.mode = SPI_MODE_0,
+		.max_speed_hz = 20000000,
+		.bus_num = 0,
+		.chip_select = 0,
+	},
+};
+
 #ifdef CONFIG_EARLY_PRINTK
 
 static void sbc030_serial_putc(const char c)
@@ -141,6 +159,8 @@ int __init sbc030_platform_init(void)
 	platform_device_register(&spi0_device);
 
 	platform_device_register(&spi1_device);
+
+	spi_register_board_info(sbc030_spi_info, ARRAY_SIZE(sbc030_spi_info));
 
 	return 0;
 }

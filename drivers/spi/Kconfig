@@ -61,6 +61,11 @@ config SPI_ALTERA
 	help
 	  This is the driver for the Altera SPI Controller.
 
+config SPI_SBC030
+	bool "SBC030 SPI Controller"
+	help
+	  This is the driver for the SBC030 SPI Controller.
+
 config SPI_ATH79
 	tristate "Atheros AR71XX/AR724X/AR913X SPI controller driver"
 	depends on ATH79 && GPIOLIB
