@@ -255,7 +255,7 @@ static int mc68681_probe(struct platform_device *pdev)
 	port->mapbase = r_mem->start;
 	port->membase = ioremap(r_mem->start, 32);
 	port->irq = r_irq->start;
-	port->uartclk = 614400;
+	port->uartclk = 1843200;
 	port->iotype = UPIO_MEM;
 	port->flags = UPF_BOOT_AUTOCONF;
 	port->line = 0;
