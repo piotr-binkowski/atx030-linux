@@ -76,13 +76,6 @@ static struct spi_board_info sbc030_spi_info[] = {
 		.bus_num = 1,
 		.chip_select = 0,
 	},
-	{
-		.modalias = "mmc_spi",
-		.mode = SPI_MODE_0,
-		.max_speed_hz = 20000000,
-		.bus_num = 0,
-		.chip_select = 0,
-	},
 };
 
 #ifdef CONFIG_EARLY_PRINTK
