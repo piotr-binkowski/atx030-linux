@@ -77,8 +77,6 @@ static int sbc030_spi_probe(struct platform_device *pdev)
 	struct spi_master *master;
 	struct resource *res;
 
-	dev_info(&pdev->dev, "SBC030 SPI Driver\n");
-
 	master = spi_alloc_master(&pdev->dev, sizeof(struct sbc030_spi));
 	if(!master)
 		return -ENODEV;
