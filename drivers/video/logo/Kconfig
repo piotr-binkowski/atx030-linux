@@ -19,6 +19,10 @@ config LOGO_LINUX_MONO
 	bool "Standard black and white Linux logo"
 	default y
 
+config LOGO_KREM_MONO
+	bool "Standard kremowka logo"
+	default y
+
 config LOGO_LINUX_VGA16
 	bool "Standard 16-color Linux logo"
 	default y

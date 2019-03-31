@@ -52,6 +52,10 @@ const struct linux_logo * __ref fb_find_logo(int depth)
 		/* Generic Linux logo */
 		logo = &logo_linux_mono;
 #endif
+#ifdef CONFIG_LOGO_KREM_MONO
+		/* Generic kremowka logo */
+		logo = &logo_krem_mono;
+#endif
 #ifdef CONFIG_LOGO_SUPERH_MONO
 		/* SuperH Linux logo */
 		logo = &logo_superh_mono;
