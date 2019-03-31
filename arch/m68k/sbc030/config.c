@@ -101,13 +101,13 @@ static struct platform_device sst_flash_device = {
 static struct mtd_partition spi_flash_parts[] = {
 		{
 			.name = "kernel",
-			.size = 0x400000,
+			.size = 0x200000,
 			.offset = 0x0,
 		},
 		{
 			.name = "rootfs",
-			.size = 0xc00000,
-			.offset = 0x400000,
+			.size = 0xe00000,
+			.offset = 0x200000,
 		},
 	};
 
