@@ -202,6 +202,12 @@ void __init config_sbc030(void)
 	mach_sched_init = sbc030_sched_init;
 	mach_get_model = sbc030_get_model;
 	mach_max_dma_address = 0x10000000;
+
+#ifdef CONFIG_VT
+#if defined(CONFIG_SBC_CONSOLE)
+	conswitchp = &sbc_con;
+#endif
+#endif
 }
 
 int __init sbc030_platform_init(void)

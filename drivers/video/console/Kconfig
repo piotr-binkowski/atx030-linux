@@ -82,6 +82,11 @@ config MDA_CONSOLE
 
 	  If unsure, say N.
 
+config SBC_CONSOLE
+	bool "SBC030 Console"
+	help
+	  This adds support for SBC030 text console
+
 config SGI_NEWPORT_CONSOLE
         tristate "SGI Newport Console support"
 	depends on SGI_IP22 && HAS_IOMEM
