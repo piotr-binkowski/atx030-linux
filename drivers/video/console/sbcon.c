@@ -30,9 +30,6 @@ static unsigned sbc_cols = 80;
 static unsigned sbc_rows = 25;
 static unsigned sbc_font_height = 16;
 static unsigned sbc_lines = 400;
-static unsigned cur_x;
-static unsigned cur_y;
-static unsigned cur_state;
 
 static u16 *sbc_addr(int x, int y)
 {
@@ -75,28 +72,16 @@ static void sbc_con_clear(struct vc_data *c, int y, int x, int height, int width
 
 static void sbc_con_cursor(struct vc_data *c, int mode)
 {
+	u16 ch = c->vc_screenbuf[c->vc_x + c->vc_y * c->vc_cols];
 	switch(mode) {
-	case CM_DRAW:
-		cur_x = c->vc_x;
-		cur_y = c->vc_x;
-		cur_state = 1;
-		sbc_con_invert_region(c, sbc_addr(cur_x, cur_y), 1);
-		break;
 	case CM_ERASE:
-		if(cur_state) {
-			sbc_con_invert_region(c, sbc_addr(cur_x, cur_y), 1);
-			cur_state = 0;
-		}
+		sbc_con_putc(c, ch, c->vc_y, c->vc_x);
 		break;
 	case CM_MOVE:
-		sbc_con_invert_region(c, sbc_addr(cur_x, cur_y), 1);
-		cur_x = c->vc_x;
-		cur_y = c->vc_x;
-		sbc_con_invert_region(c, sbc_addr(cur_x, cur_y), 1);
+	case CM_DRAW:
+		sbc_con_putc(c, ch ^ c->vc_complement_mask, c->vc_y, c->vc_x);
 		break;
 	}
-
-	return;
 }
 
 static bool sbc_con_scroll(struct vc_data *c, unsigned int t, unsigned int b, enum con_scroll dir, unsigned int lines)
