@@ -333,4 +333,4 @@ module_exit(mc68681_exit);
 
 MODULE_AUTHOR("Piotr Binkowski");
 MODULE_DESCRIPTION("MC68681 serial driver");
-MODULE_LICENSE("MIT");
+MODULE_LICENSE("GPL");
