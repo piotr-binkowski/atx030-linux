@@ -24,9 +24,11 @@
 //#define INFO() pr_notice("%s:%d", __func__, __LINE__)
 #define INFO()
 
-static struct uart_port ports[1];
+static struct uart_port ports[2];
 
 static struct uart_port *console_port;
+
+static u8 imr;
 
 static void mc68681_stop_tx(struct uart_port *port)
 {
@@ -45,8 +47,8 @@ static void mc68681_enable_ms(struct uart_port *port)
 
 static void mc68681_putchar(struct uart_port *port, int ch)
 {
-	while(!(ioread8(port->mapbase + UART_SR) & 0x04));
-	iowrite8(ch, port->mapbase + UART_TB);
+	while(!(ioread8(port->mapbase + UART_SR + 16 * port->line) & 0x04));
+	iowrite8(ch, port->mapbase + UART_TB + 16 * port->line);
 }
 
 static void mc68681_start_tx(struct uart_port *port)
@@ -71,8 +73,9 @@ static irqreturn_t mc68681_irq_handler(int irq, void *dev_id)
 	struct uart_port *port = dev_id;
 	int isr = ioread8(port->mapbase + UART_ISR);
 
-	if(isr & 0x02){
-		char c = ioread8(port->mapbase + UART_TB);
+	if((port->line == 0 && isr & 0x02) || (port->line == 1 && isr & 0x20)){
+		char c = ioread8(port->mapbase + UART_TB + 16 * port->line);
+
 		port->icount.rx++;
 		uart_insert_char(port, 0, 0, c, TTY_NORMAL);
 
@@ -81,9 +84,9 @@ static irqreturn_t mc68681_irq_handler(int irq, void *dev_id)
 		spin_lock(&port->lock);
 
 		return IRQ_HANDLED;
-	} else {
-		return IRQ_NONE;
 	}
+
+	return IRQ_NONE;
 }
 
 static unsigned int mc68681_get_mctrl(struct uart_port *port)
@@ -108,7 +111,12 @@ static int mc68681_startup(struct uart_port *port)
 
 	ret = request_irq(port->irq, mc68681_irq_handler, IRQF_SHARED, DRIVER_NAME, port);
 
-	iowrite8(0x02, port->mapbase + UART_ISR);
+	if(port->line == 0)
+		imr |= 0x02;
+	else
+		imr |= 0x20;
+
+	iowrite8(imr, port->mapbase + UART_ISR);
 
 	return ret;
 }
@@ -116,13 +124,20 @@ static int mc68681_startup(struct uart_port *port)
 static void mc68681_shutdown(struct uart_port *port)
 {
 	INFO();
+
+	if(port->line == 0)
+		imr &= ~0x02;
+	else
+		imr &= ~0x20;
+
+	iowrite8(imr, port->mapbase + UART_ISR);
+
 	free_irq(port->irq, port);
 }
 
 static void mc68681_set_termios(struct uart_port *port, struct ktermios *temios, struct ktermios *old)
 {
 	INFO();
-
 }
 
 static const char * mc68681_type(struct uart_port *port)
@@ -245,26 +260,30 @@ static int mc68681_resume(struct platform_device *pdev)
 static int mc68681_probe(struct platform_device *pdev)
 {
 	struct resource *r_mem, *r_irq;
+	struct uart_port *port;
+	int i;
 
 	INFO();
 
-	struct uart_port *port = &ports[0];
 	r_mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	r_irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 
-	port->mapbase = r_mem->start;
-	port->membase = ioremap(r_mem->start, 32);
-	port->irq = r_irq->start;
-	port->uartclk = 1843200;
-	port->iotype = UPIO_MEM;
-	port->flags = UPF_BOOT_AUTOCONF;
-	port->line = 0;
-	port->ops = &mc68681_ops;
-	port->fifosize = 1;
+	console_port = &ports[0];
 
-	console_port = port;
+	for(i = 0; i < 2; i++){
+		port = &ports[i];
+		port->mapbase = r_mem->start;
+		port->irq = r_irq->start;
+		port->uartclk = 1843200;
+		port->iotype = UPIO_MEM;
+		port->flags = UPF_BOOT_AUTOCONF;
+		port->line = i;
+		port->ops = &mc68681_ops;
+		port->fifosize = 1;
 
-	uart_add_one_port(&mc68681_drv, port);
+		uart_add_one_port(&mc68681_drv, port);
+	}
+
 
 	return 0;
 }
