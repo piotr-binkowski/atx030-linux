@@ -24,7 +24,7 @@ static struct resource duart_res[] = {
 };
 
 static struct platform_device duart_device = {
-	.name = "mc,68681",
+	.name = "mc68681",
 	.id = 0,
 	.num_resources = ARRAY_SIZE(duart_res),
 	.resource = duart_res,

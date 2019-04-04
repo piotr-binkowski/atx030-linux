@@ -14,7 +14,7 @@
 #include <asm/io.h>
 #include <asm/irq.h>
 
-#define DRIVER_NAME "mc,68681"
+#define DRIVER_NAME "mc68681"
 
 #define UART_TB 7
 #define UART_SR 3
