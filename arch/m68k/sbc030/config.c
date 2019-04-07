@@ -206,7 +206,7 @@ void __init config_sbc030(void)
 	mach_init_IRQ = sbc030_init_IRQ;
 	mach_sched_init = sbc030_sched_init;
 	mach_get_model = sbc030_get_model;
-	mach_max_dma_address = 0x10000000;
+	mach_max_dma_address = 0xffffffff;
 	mach_reset = sbc030_reset;
 
 #ifdef CONFIG_VT
