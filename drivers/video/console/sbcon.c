@@ -128,7 +128,18 @@ static int sbc_con_blank(struct vc_data *c, int blank, int mode_switch)
 
 static u8 sbc_con_build_attr(struct vc_data *c, u8 color, u8 intensity, u8 blink, u8 underline, u8 reverse, u8 italic)
 {
-	u8 attr = color;
+	u8 attr;
+
+	if(reverse)
+		attr = (color & 0x07) << 4 | (color 0x70) >> 4;
+	else
+		attr = color & 0x77;
+
+	if(blink)
+		attr |= 0x80;
+
+	if(intensity)
+		attr |= 0x08;
 
 	return attr;
 }
