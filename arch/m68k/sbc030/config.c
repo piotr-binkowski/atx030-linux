@@ -128,12 +128,11 @@ static struct spi_board_info sbc030_spi_info[] = {
 		.chip_select = 0,
 	},
 	{
-		.modalias = "m25p80",
+		.modalias = "mmc_spi",
 		.mode = SPI_MODE_0,
 		.max_speed_hz = 20000000,
 		.bus_num = 0,
 		.chip_select = 0,
-		.platform_data = &spi_flash_data,
 	},
 };
 
