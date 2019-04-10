@@ -50,22 +50,23 @@ static int sbc030_spi_txrx(struct spi_device *spi, struct spi_transfer *t)
 	struct sbc030_spi *hw = sbc030_spi_to_hw(spi);
 	int count;
 	int len = t->len;
-	uint8_t *tx, *rx;
+	uint8_t *txd, *rxd;
 
-	tx = (uint8_t*)t->tx_buf;
-	rx = (uint8_t*)t->rx_buf;
+	txd = (uint8_t*)t->tx_buf;
+	rxd = (uint8_t*)t->rx_buf;
 
 	for(count = 0; count < len; count++){
+		uint8_t tx = txd ? txd[count] : 0;
+		uint8_t rx;
 
-		if(tx)
-			writeb(tx[count], hw->base + SBC030_SPI_DR);
-		else
-			writeb(0, hw->base + SBC030_SPI_DR);
+		writeb(tx, hw->base + SBC030_SPI_DR);
 
 		while(!(readb(hw->base + SBC030_SPI_SR) & 0x02));
 
-		if(rx)
-			rx[count] = readb(hw->base + SBC030_SPI_DR);
+		rx = readb(hw->base + SBC030_SPI_DR);
+
+		if(rxd)
+			rxd[count] = rx;
 	}
 
 	return count;
