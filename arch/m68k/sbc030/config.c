@@ -76,16 +76,23 @@ static struct resource sst_flash_res = {
 	.flags = IORESOURCE_MEM,
 };
 
-static struct mtd_partition sst_flash_part = {
-	.name = "u-boot",
-	.size = 0x80000,
-	.offset = 0x0,
+static struct mtd_partition sst_flash_parts[] = {
+	{
+		.name = "u-boot",
+		.size = 0x7F000,
+		.offset = 0x0,
+	},
+	{
+		.name = "fonts",
+		.size = 0x1000,
+		.offset = 0x7F000,
+	},
 };
 
 static struct physmap_flash_data sst_flash_data = {
 	.width = 1,
-	.parts = &sst_flash_part,
-	.nr_parts = 1,
+	.parts = sst_flash_parts,
+	.nr_parts = 2,
 };
 
 static struct platform_device sst_flash_device = {
@@ -97,26 +104,6 @@ static struct platform_device sst_flash_device = {
 	.num_resources = 1,
 	.resource = &sst_flash_res,
 };
-
-static struct mtd_partition spi_flash_parts[] = {
-		{
-			.name = "kernel",
-			.size = 0x200000,
-			.offset = 0x0,
-		},
-		{
-			.name = "rootfs",
-			.size = 0xe00000,
-			.offset = 0x200000,
-		},
-	};
-
-static struct flash_platform_data spi_flash_data = {
-		.name = "w25q128",
-		.parts = spi_flash_parts,
-		.nr_parts = ARRAY_SIZE(spi_flash_parts),
-		.type = "w25q128",
-	};
 
 static struct spi_board_info sbc030_spi_info[] = {
 	{
