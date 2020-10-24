@@ -1,0 +1,13 @@
+#ifndef _M68K_ATX030_HW_H
+#define _M68K_ATX030_HW_H
+
+#include <asm/bootinfo-atx030.h>
+
+#define ATX030_FT245_BASE	0xE0000000
+#define ATX030_FT245_TXE	0xE0000000
+#define ATX030_FT245_DATA	0xE0000002
+
+#define ATX030_FLASH_BASE	0xF0000000
+#define ATX030_FLASH_SIZE	0x80000
+
+#endif

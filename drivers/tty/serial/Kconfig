@@ -25,6 +25,13 @@ config SERIAL_MC68681
 	help
 	  "This selects MC68681 DUART"
 
+config SERIAL_FT245
+	bool "FT245"
+	select SERIAL_CORE
+	select SERIAL_CORE_CONSOLE
+	help
+	  "This selects FT245 UART"
+
 config SERIAL_AMBA_PL010
 	tristate "ARM AMBA PL010 serial port support"
 	depends on ARM_AMBA

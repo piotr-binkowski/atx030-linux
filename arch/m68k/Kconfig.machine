@@ -141,6 +141,14 @@ config SBC030
 	help
 	  Support for the SBC030
 
+config ATX030
+	bool "ATX030 support"
+	depends on MMU
+	select MMU_MOTOROLA if MMU
+	select M68030
+	help
+	  Support for the ATX030
+
 endif # M68KCLASSIC
 
 config PILOT
