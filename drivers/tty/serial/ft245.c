@@ -19,6 +19,7 @@
 #define FT_TXE		0
 #define FT_RXF		1
 #define	FT_DATA		2
+#define	FT_IRQEN	3
 #define PORT_FT245	114
 
 #define INFO() //pr_notice("%s:%d", __func__, __LINE__)
@@ -69,6 +70,20 @@ static irqreturn_t ft245_irq_handler(int irq, void *dev_id)
 {
 	struct uart_port *port = dev_id;
 
+	if(!ioread8(port->mapbase + FT_RXF)) {
+		while(!ioread8(port->mapbase + FT_RXF)) {
+			char c = ioread8(port->mapbase + FT_DATA);
+			port->icount.rx++;
+			uart_insert_char(port, 0, 0, c, TTY_NORMAL);
+		}
+
+		spin_unlock(&port->lock);
+		tty_flip_buffer_push(&port->state->port);
+		spin_lock(&port->lock);
+
+		return IRQ_HANDLED;
+	}
+
 	return IRQ_NONE;
 }
 
@@ -93,6 +108,7 @@ static int ft245_startup(struct uart_port *port)
 	INFO();
 
 	ret = request_irq(port->irq, ft245_irq_handler, IRQF_SHARED, DRIVER_NAME, port);
+	iowrite8(0x01, port->mapbase + FT_IRQEN);
 
 	return ret;
 }
@@ -101,6 +117,7 @@ static void ft245_shutdown(struct uart_port *port)
 {
 	INFO();
 
+	iowrite8(0x00, port->mapbase + FT_IRQEN);
 	free_irq(port->irq, port);
 }
 
@@ -112,7 +129,7 @@ static void ft245_set_termios(struct uart_port *port, struct ktermios *temios, s
 static const char * ft245_type(struct uart_port *port)
 {
 	INFO();
-	return port->type == PORT_FT245 ? "MC68681" : NULL;
+	return port->type == PORT_FT245 ? "FT245" : NULL;
 }
 
 static void ft245_release_port(struct uart_port *port)

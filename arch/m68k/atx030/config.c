@@ -134,7 +134,7 @@ void __init config_atx030(void)
 
 int __init atx030_platform_init(void)
 {
-	//platform_device_register(&ft245_device);
+	platform_device_register(&ft245_device);
 
 	platform_device_register(&sst_flash_device);
 
