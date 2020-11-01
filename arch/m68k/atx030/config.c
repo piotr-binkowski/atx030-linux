@@ -38,13 +38,13 @@ static struct resource sst_flash_res = {
 static struct mtd_partition sst_flash_parts[] = {
 	{
 		.name = "u-boot",
-		.size = 0x40000,
+		.size = 0x20000,
 		.offset = 0x0,
 	},
 	{
-		.name = "u-boot env",
-		.size = 0x1000,
-		.offset = 0x7F000,
+		.name = "jffs2",
+		.size = 0x60000,
+		.offset = 0x20000,
 	},
 };
 
