@@ -7,6 +7,13 @@
 #include <linux/mtd/partitions.h>
 #include <linux/mtd/physmap.h>
 
+#include <linux/gpio.h>
+#include <linux/platform_data/i2c-gpio.h>
+#include <linux/gpio/machine.h>
+
+#include <linux/platform_data/at24.h>
+#include <linux/i2c.h>
+
 extern void __init atx030_init_IRQ(void);
 
 static struct resource ft245_res[] = {
@@ -27,6 +34,59 @@ static struct platform_device ft245_device = {
 	.id = 0,
 	.num_resources = ARRAY_SIZE(ft245_res),
 	.resource = ft245_res,
+};
+
+static struct resource gpio_res = {
+	.start = ATX030_I2C_GPIO_BASE,
+	.end = ATX030_I2C_GPIO_BASE + 16,
+	.flags = IORESOURCE_MEM,
+};
+
+static struct platform_device i2c_gpio_device = {
+	.name = "atx030-gpio",
+	.id = 0,
+	.num_resources = 1,
+	.resource = &gpio_res,
+};
+
+static struct gpiod_lookup_table i2c_gpiod_table = {
+        .dev_id         = "i2c-gpio.0",
+        .table          = {
+                GPIO_LOOKUP_IDX("atx030-gpio.0", 0, NULL, 0,
+                                GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN),
+                GPIO_LOOKUP_IDX("atx030-gpio.0", 1, NULL, 1,
+                                GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN),
+        },
+};
+
+static struct i2c_gpio_platform_data i2c_bus_data = {
+        .udelay         = 10,
+        .timeout        = 100,
+};
+
+static struct platform_device i2c_bus_device = {
+        .name           = "i2c-gpio",
+        .id             = 0,
+        .dev            = {
+                .platform_data  = &i2c_bus_data,
+        }
+};
+
+static struct at24_platform_data eeprom_info = {
+        .byte_len       = (256*1024) / 8,
+        .page_size      = 64,
+        .flags          = AT24_FLAG_ADDR16,
+};
+
+static struct i2c_board_info i2c_info[] = {
+        {
+                I2C_BOARD_INFO("24c256", 0x54),
+                .platform_data  = &eeprom_info,
+        },
+        {
+                I2C_BOARD_INFO("rtc-ds1307", 0x68),
+		.type = "ds3231",
+        },
 };
 
 static struct resource sst_flash_res = {
@@ -135,6 +195,14 @@ void __init config_atx030(void)
 int __init atx030_platform_init(void)
 {
 	platform_device_register(&ft245_device);
+
+	gpiod_add_lookup_table(&i2c_gpiod_table);
+
+	platform_device_register(&i2c_gpio_device);
+
+	platform_device_register(&i2c_bus_device);
+
+	i2c_register_board_info(0, i2c_info, ARRAY_SIZE(i2c_info));
 
 	platform_device_register(&sst_flash_device);
 

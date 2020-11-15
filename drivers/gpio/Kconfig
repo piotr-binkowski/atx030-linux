@@ -100,6 +100,11 @@ config GPIO_74XX_MMIO
 	    8 bits:	74244 (Input), 74273 (Output)
 	    16 bits:	741624 (Input), 7416374 (Output)
 
+config GPIO_ATX030_MMIO
+	tristate "GPIO driver for ATX030 with MMIO access"
+	depends on ATX030
+	select GPIO_GENERIC
+
 config GPIO_ALTERA
 	tristate "Altera GPIO"
 	depends on OF_GPIO
