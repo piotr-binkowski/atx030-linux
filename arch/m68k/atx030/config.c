@@ -14,6 +14,8 @@
 #include <linux/platform_data/at24.h>
 #include <linux/i2c.h>
 
+#include <linux/spi/spi.h>
+
 extern void __init atx030_init_IRQ(void);
 
 static struct resource ft245_res[] = {
@@ -34,6 +36,54 @@ static struct platform_device ft245_device = {
 	.id = 0,
 	.num_resources = ARRAY_SIZE(ft245_res),
 	.resource = ft245_res,
+};
+
+static struct resource spi0_res[] = {
+	{
+		.start = ATX030_SPI0_BASE,
+		.end = ATX030_SPI0_BASE + 16,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+static struct platform_device spi0_device = {
+	.name = "atx030,spi",
+	.id = 0,
+	.num_resources = ARRAY_SIZE(spi0_res),
+	.resource = spi0_res,
+};
+
+static struct resource spi1_res[] = {
+	{
+		.start = ATX030_SPI1_BASE,
+		.end = ATX030_SPI1_BASE + 16,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+static struct platform_device spi1_device = {
+	.name = "atx030,spi",
+	.id = 1,
+	.num_resources = ARRAY_SIZE(spi1_res),
+	.resource = spi1_res,
+};
+
+static struct spi_board_info spi_info[] = {
+	{
+		.modalias = "enc28j60",
+		.mode = SPI_MODE_0,
+		.irq = IRQ_AUTO_7,
+		.max_speed_hz = 12000000,
+		.bus_num = 1,
+		.chip_select = 0,
+	},
+	{
+		.modalias = "mmc_spi",
+		.mode = SPI_MODE_0,
+		.max_speed_hz = 12000000,
+		.bus_num = 0,
+		.chip_select = 0,
+	},
 };
 
 static struct resource gpio_res = {
@@ -98,20 +148,15 @@ static struct resource sst_flash_res = {
 static struct mtd_partition sst_flash_parts[] = {
 	{
 		.name = "u-boot",
-		.size = 0x20000,
+		.size = 0x80000,
 		.offset = 0x0,
-	},
-	{
-		.name = "jffs2",
-		.size = 0x60000,
-		.offset = 0x20000,
 	},
 };
 
 static struct physmap_flash_data sst_flash_data = {
 	.width = 1,
 	.parts = sst_flash_parts,
-	.nr_parts = 2,
+	.nr_parts = ARRAY_SIZE(sst_flash_parts),
 };
 
 static struct platform_device sst_flash_device = {
@@ -205,6 +250,12 @@ int __init atx030_platform_init(void)
 	i2c_register_board_info(0, i2c_info, ARRAY_SIZE(i2c_info));
 
 	platform_device_register(&sst_flash_device);
+
+	platform_device_register(&spi0_device);
+
+	platform_device_register(&spi1_device);
+
+	spi_register_board_info(spi_info, ARRAY_SIZE(spi_info));
 
 	return 0;
 }
