@@ -38,6 +38,26 @@ static struct platform_device ft245_device = {
 	.resource = ft245_res,
 };
 
+static struct resource i2s_res[] = {
+	{
+		.start = ATX030_I2S_BASE,
+		.end = ATX030_I2S_BASE + 16,
+		.flags = IORESOURCE_MEM,
+	},
+	{
+		.start = IRQ_AUTO_6,
+		.end = IRQ_AUTO_6,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device i2s_device = {
+	.name = "atx030,i2s",
+	.id = 0,
+	.num_resources = ARRAY_SIZE(i2s_res),
+	.resource = i2s_res,
+};
+
 static struct resource spi0_res[] = {
 	{
 		.start = ATX030_SPI0_BASE,
@@ -254,6 +274,8 @@ int __init atx030_platform_init(void)
 	platform_device_register(&spi0_device);
 
 	platform_device_register(&spi1_device);
+
+	platform_device_register(&i2s_device);
 
 	spi_register_board_info(spi_info, ARRAY_SIZE(spi_info));
 
