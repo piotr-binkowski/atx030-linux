@@ -24,15 +24,14 @@
 #define ATX030_I2S_MONO		0x08
 
 #define FRAME_BYTES  (2)
-#define PERIOD_BYTES (1024)
-#define PERIODS_MAX  (64)
+#define PERIOD_BYTES (2000)
+#define PERIODS_MAX  (512)
 #define BUF_BYTES    (PERIODS_MAX*PERIOD_BYTES)
 
 struct atx030_i2s_priv {
 	struct platform_device *pdev;
 
 	void __iomem *base;
-	uint16_t *buf;
 	int irq;
 
 	struct snd_card *card;
@@ -47,8 +46,12 @@ struct atx030_i2s_priv {
 };
 
 static struct snd_pcm_hardware atx030_i2s_hw = {
-	.info             = SNDRV_PCM_INFO_INTERLEAVED,
-	.formats          = SNDRV_PCM_FMTBIT_S16_BE | SNDRV_PCM_FMTBIT_S16_LE,
+	.info             = (SNDRV_PCM_INFO_INTERLEAVED |
+			     SNDRV_PCM_INFO_NONINTERLEAVED |
+			     SNDRV_PCM_INFO_MMAP |
+			     SNDRV_PCM_INFO_BLOCK_TRANSFER |
+			     SNDRV_PCM_INFO_MMAP_VALID),
+	.formats          = (SNDRV_PCM_FMTBIT_S16_BE | SNDRV_PCM_FMTBIT_S16_LE),
 	.rates            = SNDRV_PCM_RATE_44100,
 	.rate_min         = 44100,
 	.rate_max         = 44100,
@@ -76,16 +79,20 @@ static irqreturn_t atx030_i2s_irq_handler(int irq, void *ptr)
 	int len;
 	if (priv->substream && priv->substream->runtime && priv->substream->runtime->dma_area) {
 		buf = (uint16_t*)priv->substream->runtime->dma_area;
-		buf += priv->buf_pos;
 
 		len = (PERIOD_BYTES/FRAME_BYTES);
 
 		if((priv->buf_pos + len) > priv->buf_siz)
 			len = priv->buf_siz - priv->buf_pos;
 
-		priv->buf_pos += atx030_i2s_fill_fifo(priv, buf, len);
+		priv->buf_pos += atx030_i2s_fill_fifo(priv, buf + priv->buf_pos, len);
 		if(priv->buf_pos == priv->buf_siz)
 		       priv->buf_pos = 0;
+
+		if(priv->buf_pos == 0) {
+			len = (PERIOD_BYTES/FRAME_BYTES) - len;
+			priv->buf_pos += atx030_i2s_fill_fifo(priv, buf, len);
+		}
 
 		snd_pcm_period_elapsed(priv->substream);
 
@@ -150,16 +157,10 @@ static int atx030_i2s_trigger(struct snd_pcm_substream *substream, int cmd)
 	switch(cmd) {
 		case SNDRV_PCM_TRIGGER_START:
 			len = (PERIOD_BYTES/FRAME_BYTES);
-
 			buf = (uint16_t*)priv->substream->runtime->dma_area;
-			buf += priv->buf_pos;
 
-			priv->buf_pos += atx030_i2s_fill_fifo(priv, buf, len);
-
-			buf = (uint16_t*)priv->substream->runtime->dma_area;
-			buf += priv->buf_pos;
-
-			priv->buf_pos += atx030_i2s_fill_fifo(priv, buf, len);
+			priv->buf_pos += atx030_i2s_fill_fifo(priv, buf + priv->buf_pos, len);
+			priv->buf_pos += atx030_i2s_fill_fifo(priv, buf + priv->buf_pos, len);
 
 			reg = ATX030_I2S_IRQEN | ATX030_I2S_TXEN | ATX030_I2S_MONO;
 
@@ -260,9 +261,6 @@ static int atx030_i2s_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	priv->buf = kzalloc(1024, GFP_KERNEL);
-	memset(priv->buf, 0x55, 1024);
-
 	platform_set_drvdata(pdev, card);
 
 	return 0;
@@ -270,6 +268,8 @@ static int atx030_i2s_probe(struct platform_device *pdev)
 
 static int atx030_i2s_remove(struct platform_device *pdev)
 {
+	snd_card_free(platform_get_drvdata(pdev));	
+
 	return 0;
 }
 
@@ -282,3 +282,5 @@ static struct platform_driver atx030_i2s_driver = {
 };
 
 module_platform_driver(atx030_i2s_driver);
+
+MODULE_LICENSE("GPL");
