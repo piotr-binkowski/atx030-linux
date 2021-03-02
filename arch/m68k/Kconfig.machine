@@ -149,6 +149,14 @@ config ATX030
 	help
 	  Support for the ATX030
 
+config ATX040
+	bool "ATX040 support"
+	depends on MMU
+	select MMU_MOTOROLA if MMU
+	select M68040
+	help
+	  Support for the ATX040
+
 endif # M68KCLASSIC
 
 config PILOT

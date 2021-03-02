@@ -69,7 +69,12 @@ config SPI_SBC030
 config SPI_ATX030
 	bool "ATX030 SPI Controller"
 	help
-	  This is the driver for the SBC030 SPI Controller.
+	  This is the driver for the ATX030 SPI Controller.
+
+config SPI_WB
+	bool "WB SPI Controller"
+	help
+	  This is the driver for the WB SPI Controller.
 
 config SPI_ATH79
 	tristate "Atheros AR71XX/AR724X/AR913X SPI controller driver"

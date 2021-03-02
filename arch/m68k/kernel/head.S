@@ -263,6 +263,7 @@
 #include <asm/bootinfo-q40.h>
 #include <asm/bootinfo-sbc030.h>
 #include <asm/bootinfo-atx030.h>
+#include <asm/bootinfo-atx040.h>
 #include <asm/bootinfo-vme.h>
 #include <asm/setup.h>
 #include <asm/entry.h>
@@ -277,6 +278,9 @@
 #endif
 #ifdef CONFIG_ATX030
 #  include <asm/atx030hw.h>
+#endif
+#ifdef CONFIG_ATX040
+#  include <asm/atx040hw.h>
 #endif
 
 #ifdef CONFIG_EARLY_PRINTK
@@ -543,6 +547,7 @@ func_define	putn,1
 #define is_not_q40(lab) cmpl &MACH_Q40,%pc@(m68k_machtype); jne lab
 #define is_not_sbc030(lab) cmpl &MACH_SBC030,%pc@(m68k_machtype); jne lab
 #define is_not_atx030(lab) cmpl &MACH_ATX030,%pc@(m68k_machtype); jne lab
+#define is_not_atx040(lab) cmpl &MACH_ATX040,%pc@(m68k_machtype); jne lab
 #define is_not_sun3x(lab) cmpl &MACH_SUN3X,%pc@(m68k_machtype); jne lab
 
 #define hasnt_leds(lab) cmpl &MACH_HP300,%pc@(m68k_machtype); \
@@ -591,6 +596,7 @@ ENTRY(_stext)
 	.long	MACH_HP300, HP300_BOOTI_VERSION
 	.long	MACH_SBC030, SBC030_BOOTI_VERSION
 	.long	MACH_ATX030, ATX030_BOOTI_VERSION
+	.long	MACH_ATX040, ATX040_BOOTI_VERSION
 	.long	0
 1:	jra	__start
 
@@ -1272,6 +1278,18 @@ L(notsbc030):
 	jbra	L(mmu_init_done)
 
 L(notatx030):
+#endif
+
+#ifdef CONFIG_ATX040
+	is_not_atx040(L(notatx040))
+
+	putc	'4'
+	mmu_map_tt	#0,#0xC0000000,#0x40000000,#_PAGE_NOCACHE_S
+	mmu_map_tt	#1,#0xC0000000,#0x40000000,#_PAGE_NOCACHE_S
+
+	jbra	L(mmu_init_done)
+
+L(notatx040):
 #endif
 
 #ifdef CONFIG_APOLLO
@@ -3112,6 +3130,13 @@ func_start	serial_putc,%d0/%d1/%a0/%a1
 #ifdef CONFIG_ATX030
 	is_not_atx030(2f)
 	moveb	%d0,ATX030_FT245_DATA
+	jbra	L(serial_putc_done)
+2:
+#endif
+
+#ifdef CONFIG_ATX040
+	is_not_atx040(2f)
+	moveb	%d0,ATX040_WB_UART_DATA
 	jbra	L(serial_putc_done)
 2:
 #endif

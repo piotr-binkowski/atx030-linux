@@ -85,6 +85,7 @@ struct mem_info {
 #define MACH_M5441X		13
 #define MACH_SBC030		14
 #define MACH_ATX030		15
+#define MACH_ATX040		16
 
     /*
      *  CPU, FPU and MMU types (BI_CPUTYPE, BI_FPUTYPE, BI_MMUTYPE)

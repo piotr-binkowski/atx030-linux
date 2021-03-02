@@ -32,6 +32,13 @@ config SERIAL_FT245
 	help
 	  "This selects FT245 UART"
 
+config SERIAL_WB_UART
+	bool "WB UART"
+	select SERIAL_CORE
+	select SERIAL_CORE_CONSOLE
+	help
+	  "This selects WB UART"
+
 config SERIAL_AMBA_PL010
 	tristate "ARM AMBA PL010 serial port support"
 	depends on ARM_AMBA

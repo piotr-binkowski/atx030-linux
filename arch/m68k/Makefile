@@ -110,6 +110,7 @@ core-$(CONFIG_SUN3X)		+= arch/m68k/sun3x/	arch/m68k/sun3/
 core-$(CONFIG_SUN3)		+= arch/m68k/sun3/	arch/m68k/sun3/prom/
 core-$(CONFIG_SBC030)		+= arch/m68k/sbc030/
 core-$(CONFIG_ATX030)		+= arch/m68k/atx030/
+core-$(CONFIG_ATX040)		+= arch/m68k/atx040/
 core-$(CONFIG_NATFEAT)		+= arch/m68k/emu/
 core-$(CONFIG_M68040)		+= arch/m68k/fpsp040/
 core-$(CONFIG_M68060)		+= arch/m68k/ifpsp060/
