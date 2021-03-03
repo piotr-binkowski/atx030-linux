@@ -9,7 +9,8 @@
 #define WB_SPI_DATA	0x00
 #define WB_SPI_STATUS	0x04
 
-#define WB_SPI_BUSY	0x02
+#define WB_SPI_RX_EMPTY	0x02
+#define WB_SPI_TX_FULL	0x04
 
 struct wb_spi {
 	struct spi_bitbang bitbang;
@@ -49,23 +50,30 @@ static void wb_spi_chipsel(struct spi_device *spi, int value)
 static int wb_spi_txrx(struct spi_device *spi, struct spi_transfer *t)
 {
 	struct wb_spi *hw = wb_spi_to_hw(spi);
-	int len;
+	int tx_len = 0, rx_len = 0;
 	uint8_t *txd, *rxd;
+	int len;
 
 	txd = (uint8_t*)t->tx_buf;
 	rxd = (uint8_t*)t->rx_buf;
 
-	for(len = t->len; len > 0; len--){
-		uint8_t tmp = txd ? *(txd++) : 0xff;
 
-		writeb(tmp, hw->base + WB_SPI_DATA);
+	for(len = t->len; rx_len < len;) {
+		while((tx_len < len) && !(readb(hw->base + WB_SPI_STATUS) & WB_SPI_TX_FULL)) {
+			uint8_t tmp = txd ? txd[tx_len] : 0xff;
 
-		while(readb(hw->base + WB_SPI_STATUS) & WB_SPI_BUSY);
+			writeb(tmp, hw->base + WB_SPI_DATA);
 
-		tmp = readb(hw->base + WB_SPI_DATA);
+			tx_len++;
+		}
+		while((rx_len < len) && !(readb(hw->base + WB_SPI_STATUS) & WB_SPI_RX_EMPTY)) {
+			uint8_t tmp = readb(hw->base + WB_SPI_DATA);
 
-		if(rxd)
-			*rxd++ = tmp;
+			if(rxd)
+				rxd[rx_len] = tmp;
+
+			rx_len++;
+		}
 	}
 
 	return t->len;
