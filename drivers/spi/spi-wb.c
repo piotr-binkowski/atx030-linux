@@ -6,11 +6,14 @@
 
 #define DRIVER_NAME "wb_spi"
 
-#define WB_SPI_DATA	0x00
-#define WB_SPI_STATUS	0x04
+#define WB_SPI_DATA_WR		0x00
+#define WB_SPI_DATA_RD		0x00
+#define WB_SPI_DATA_RD_B	0x03
+#define WB_SPI_STATUS		0x04
 
-#define WB_SPI_RX_EMPTY	0x02
-#define WB_SPI_TX_FULL	0x04
+#define WB_SPI_RX_EMPTY		0x02
+#define WB_SPI_TX_FULL		0x04
+#define WB_SPI_FIFO_DEPTH	1024
 
 struct wb_spi {
 	struct spi_bitbang bitbang;
@@ -47,37 +50,72 @@ static void wb_spi_chipsel(struct spi_device *spi, int value)
 	}
 }
 
+#if 1
 static int wb_spi_txrx(struct spi_device *spi, struct spi_transfer *t)
 {
 	struct wb_spi *hw = wb_spi_to_hw(spi);
-	int tx_len = 0, rx_len = 0;
-	uint8_t *txd, *rxd;
-	int len;
+	void __iomem *base = hw->base;
+	const u8 *txd = t->tx_buf;
+	u8 *rxd = t->rx_buf;
+	u8 leftover;
+	u32 len;
+	u16 i;
 
-	txd = (uint8_t*)t->tx_buf;
-	rxd = (uint8_t*)t->rx_buf;
+	len = t->len;
+	leftover = len % 4;
 
-
-	for(len = t->len; rx_len < len;) {
-		while((tx_len < len) && !(readb(hw->base + WB_SPI_STATUS) & WB_SPI_TX_FULL)) {
-			uint8_t tmp = txd ? txd[tx_len] : 0xff;
-
-			writeb(tmp, hw->base + WB_SPI_DATA);
-
-			tx_len++;
+	for(len = len / 4; len > 0;) {
+		const u16 tgt_len = (len > WB_SPI_FIFO_DEPTH) ? WB_SPI_FIFO_DEPTH : len;
+		u32 tmp = 0;
+		for(i = 0; i < tgt_len; i++) {
+			tmp = txd ? *(u32*)txd : tmp;
+			writel(tmp, base + WB_SPI_DATA_WR);
+			if (txd)
+				txd += 4;
 		}
-		while((rx_len < len) && !(readb(hw->base + WB_SPI_STATUS) & WB_SPI_RX_EMPTY)) {
-			uint8_t tmp = readb(hw->base + WB_SPI_DATA);
-
-			if(rxd)
-				rxd[rx_len] = tmp;
-
-			rx_len++;
+		for(i = 0; i < tgt_len; i++) {
+			while(readb(base + WB_SPI_STATUS) & WB_SPI_RX_EMPTY);
+			tmp = readl(base + WB_SPI_DATA_RD);
+			if(rxd) {
+				*(u32*)rxd = tmp;
+				rxd += 4;
+			}
 		}
+		len -= tgt_len;
+	}
+
+	for(len = leftover; len > 0; len--) {
+		u8 tmp = txd ? *(txd++) : 0;
+		writeb(tmp, base + WB_SPI_DATA_WR);
+		while(readb(base + WB_SPI_STATUS) & WB_SPI_RX_EMPTY);
+		tmp = readb(base + WB_SPI_DATA_RD_B);
+		if(rxd)
+			*(rxd++) = tmp;
 	}
 
 	return t->len;
 }
+#else
+static int wb_spi_txrx(struct spi_device *spi, struct spi_transfer *t)
+{
+	struct wb_spi *hw = wb_spi_to_hw(spi);
+	void __iomem *base = hw->base;
+	const u8 *txd = t->tx_buf;
+	u8 *rxd = t->rx_buf;
+	u32 len;
+
+	for(len = t->len; len > 0; len--) {
+		u8 tmp = txd ? *(txd++) : 0xff;
+		writeb(tmp, base + WB_SPI_DATA_WR);
+		while(readb(base + WB_SPI_STATUS) & WB_SPI_RX_EMPTY);
+		tmp = readb(base + WB_SPI_DATA_RD_B);
+		if(rxd)
+			*(rxd++) = tmp;
+	}
+
+	return t->len;
+}
+#endif
 
 static int wb_spi_probe(struct platform_device *pdev)
 {
