@@ -15,8 +15,8 @@ static struct resource wb_uart_res[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	{
-		.start = IRQ_AUTO_1,
-		.end = IRQ_AUTO_1,
+		.start = ATX040_WB_UART_IRQ,
+		.end = ATX040_WB_UART_IRQ,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -77,7 +77,7 @@ static struct spi_board_info spi_info[] = {
 	{
 		.modalias = "enc28j60",
 		.mode = SPI_MODE_0,
-		.irq = IRQ_AUTO_3,
+		.irq = ATX040_SPI_ETH_IRQ,
 		.max_speed_hz = 12000000,
 		.bus_num = 2,
 		.chip_select = 0,
@@ -136,7 +136,7 @@ static irqreturn_t atx040_timer_irq(int irq, void * dev)
 void atx040_sched_init(irq_handler_t timer_routine)
 {
 	atx040_timer_routine = timer_routine;
-	if(request_irq(IRQ_AUTO_2, atx040_timer_irq, 0, "timer", NULL))
+	if(request_irq(ATX040_SYSTICK_IRQ, atx040_timer_irq, 0, "timer", NULL))
 		panic("could not register timer irq");
 }
 

@@ -5,5 +5,6 @@
 
 void __init atx040_init_IRQ(void)
 {
-
+	m68k_setup_user_interrupt(VEC_USER, 32);
+	writel(0xFFFFFFFF, ATX040_IRQC_BASE);
 }
