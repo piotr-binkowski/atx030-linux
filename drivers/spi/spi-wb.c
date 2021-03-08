@@ -50,7 +50,6 @@ static void wb_spi_chipsel(struct spi_device *spi, int value)
 	}
 }
 
-#if 1
 static int wb_spi_txrx(struct spi_device *spi, struct spi_transfer *t)
 {
 	struct wb_spi *hw = wb_spi_to_hw(spi);
@@ -61,23 +60,22 @@ static int wb_spi_txrx(struct spi_device *spi, struct spi_transfer *t)
 	u32 len;
 	u16 i;
 
-	len = t->len;
-	leftover = len % 4;
+	leftover = t->len % 4;
 
-	for(len = len / 4; len > 0;) {
+	for(len = (t->len - leftover) / 4; len > 0;) {
 		const u16 tgt_len = (len > WB_SPI_FIFO_DEPTH) ? WB_SPI_FIFO_DEPTH : len;
 		u32 tmp = 0;
 		for(i = 0; i < tgt_len; i++) {
-			tmp = txd ? *(u32*)txd : tmp;
-			writel(tmp, base + WB_SPI_DATA_WR);
-			if (txd)
+			tmp = txd ? *((u32*)txd) : tmp;
+			__raw_writel(tmp, base + WB_SPI_DATA_WR);
+			if(txd)
 				txd += 4;
 		}
 		for(i = 0; i < tgt_len; i++) {
 			while(readb(base + WB_SPI_STATUS) & WB_SPI_RX_EMPTY);
-			tmp = readl(base + WB_SPI_DATA_RD);
+			tmp = __raw_readl(base + WB_SPI_DATA_RD);
 			if(rxd) {
-				*(u32*)rxd = tmp;
+				*((u32*)rxd) = tmp;
 				rxd += 4;
 			}
 		}
@@ -95,27 +93,6 @@ static int wb_spi_txrx(struct spi_device *spi, struct spi_transfer *t)
 
 	return t->len;
 }
-#else
-static int wb_spi_txrx(struct spi_device *spi, struct spi_transfer *t)
-{
-	struct wb_spi *hw = wb_spi_to_hw(spi);
-	void __iomem *base = hw->base;
-	const u8 *txd = t->tx_buf;
-	u8 *rxd = t->rx_buf;
-	u32 len;
-
-	for(len = t->len; len > 0; len--) {
-		u8 tmp = txd ? *(txd++) : 0xff;
-		writeb(tmp, base + WB_SPI_DATA_WR);
-		while(readb(base + WB_SPI_STATUS) & WB_SPI_RX_EMPTY);
-		tmp = readb(base + WB_SPI_DATA_RD_B);
-		if(rxd)
-			*(rxd++) = tmp;
-	}
-
-	return t->len;
-}
-#endif
 
 static int wb_spi_probe(struct platform_device *pdev)
 {
