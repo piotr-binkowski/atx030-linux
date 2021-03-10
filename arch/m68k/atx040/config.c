@@ -90,6 +90,27 @@ static struct spi_board_info spi_info[] = {
 		.chip_select = 0,
 	},
 };
+
+static struct resource i2s_res[] = {
+	{
+		.start = ATX040_I2S_BASE,
+		.end = ATX040_I2S_BASE + 16,
+		.flags = IORESOURCE_MEM,
+	},
+	{
+		.start = ATX040_I2S_SND_IRQ,
+		.end = ATX040_I2S_SND_IRQ,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device i2s_device = {
+	.name = "atx040,i2s",
+	.id = 0,
+	.num_resources = ARRAY_SIZE(i2s_res),
+	.resource = i2s_res,
+};
+
 #ifdef CONFIG_EARLY_PRINTK
 
 static void atx040_serial_putc(const char c)
@@ -164,6 +185,7 @@ int __init atx040_platform_init(void)
 	platform_device_register(&spi0_device);
 	platform_device_register(&spi1_device);
 	platform_device_register(&spi2_device);
+	platform_device_register(&i2s_device);
 
 	spi_register_board_info(spi_info, ARRAY_SIZE(spi_info));
 	return 0;

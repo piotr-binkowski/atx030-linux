@@ -1,0 +1,2 @@
+config SND_SOC_ATX040_I2S
+	tristate "Audio support for the ATX040 I2S"

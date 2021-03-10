@@ -60,3 +60,4 @@ obj-$(CONFIG_SND_SOC)	+= xilinx/
 obj-$(CONFIG_SND_SOC)	+= xtensa/
 obj-$(CONFIG_SND_SOC)	+= zte/
 obj-$(CONFIG_SND_SOC)   += atx030/
+obj-$(CONFIG_SND_SOC)   += atx040/
