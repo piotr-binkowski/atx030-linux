@@ -2,36 +2,7 @@
 #ifndef _M68K_IRQ_H_
 #define _M68K_IRQ_H_
 
-/*
- * This should be the same as the max(NUM_X_SOURCES) for all the
- * different m68k hosts compiled into the kernel.
- * Currently the Atari has 72 and the Amiga 24, but if both are
- * supported in the kernel it is better to make room for 72.
- * With EtherNAT add-on card on Atari, the highest interrupt
- * number is 140 so NR_IRQS needs to be 141.
- */
-#if defined(CONFIG_COLDFIRE)
 #define NR_IRQS 256
-#elif defined(CONFIG_VME) || defined(CONFIG_SUN3) || defined(CONFIG_SUN3X) || defined(CONFIG_SBC030) || defined(CONFIG_ATX030) || defined(CONFIG_ATX040)
-#define NR_IRQS 200
-#elif defined(CONFIG_ATARI)
-#define NR_IRQS 141
-#elif defined(CONFIG_MAC)
-#define NR_IRQS 72
-#elif defined(CONFIG_Q40)
-#define NR_IRQS	43
-#elif defined(CONFIG_AMIGA) || !defined(CONFIG_MMU)
-#define NR_IRQS	32
-#elif defined(CONFIG_APOLLO)
-#define NR_IRQS	24
-#elif defined(CONFIG_HP300)
-#define NR_IRQS	8
-#else
-#define NR_IRQS	0
-#endif
-
-#if defined(CONFIG_M68020) || defined(CONFIG_M68030) || \
-    defined(CONFIG_M68040) || defined(CONFIG_M68060)
 
 /*
  * Interrupt source definitions
@@ -69,10 +40,6 @@ extern void m68k_setup_irq_controller(struct irq_chip *,
 				      unsigned int irq, unsigned int cnt);
 
 extern unsigned int irq_canonicalize(unsigned int irq);
-
-#else
-#define irq_canonicalize(irq)  (irq)
-#endif /* !(CONFIG_M68020 || CONFIG_M68030 || CONFIG_M68040 || CONFIG_M68060) */
 
 asmlinkage void do_IRQ(int irq, struct pt_regs *regs);
 extern atomic_t irq_err_count;

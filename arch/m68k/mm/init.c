@@ -40,8 +40,6 @@ EXPORT_SYMBOL(empty_zero_page);
 extern void init_pointer_table(unsigned long ptable);
 extern pmd_t *zero_pgtable;
 
-#ifdef CONFIG_MMU
-
 pg_data_t pg_data_map[MAX_NUMNODES];
 EXPORT_SYMBOL(pg_data_map);
 
@@ -69,48 +67,12 @@ void __init m68k_setup_node(int node)
 	node_set_online(node);
 }
 
-#else /* CONFIG_MMU */
-
-/*
- * paging_init() continues the virtual memory environment setup which
- * was begun by the code in arch/head.S.
- * The parameters are pointers to where to stick the starting and ending
- * addresses of available kernel virtual memory.
- */
-void __init paging_init(void)
-{
-	/*
-	 * Make sure start_mem is page aligned, otherwise bootmem and
-	 * page_alloc get different views of the world.
-	 */
-	unsigned long end_mem = memory_end & PAGE_MASK;
-	unsigned long zones_size[MAX_NR_ZONES] = { 0, };
-
-	high_memory = (void *) end_mem;
-
-	empty_zero_page = memblock_alloc(PAGE_SIZE, PAGE_SIZE);
-
-	/*
-	 * Set up SFC/DFC registers (user data space).
-	 */
-	set_fs (USER_DS);
-
-	zones_size[ZONE_DMA] = (end_mem - PAGE_OFFSET) >> PAGE_SHIFT;
-	free_area_init(zones_size);
-}
-
-#endif /* CONFIG_MMU */
-
 void free_initmem(void)
 {
 	free_initmem_default(-1);
 }
 
-#if defined(CONFIG_MMU)
 #define VECTORS	&vectors[0]
-#else
-#define VECTORS	_ramvec
-#endif
 
 static inline void init_pointer_tables(void)
 {

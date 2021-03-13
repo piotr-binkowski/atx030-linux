@@ -25,16 +25,11 @@
  * The ColdFire parts cannot do some immediate to memory operations,
  * so for them we do not specify the "i" asm constraint.
  */
-#ifdef CONFIG_COLDFIRE
-#define	ASM_DI	"d"
-#else
-#define	ASM_DI	"di"
-#endif
 
 #define ATOMIC_OP(op, c_op, asm_op)					\
 static inline void atomic_##op(int i, atomic_t *v)			\
 {									\
-	__asm__ __volatile__(#asm_op "l %1,%0" : "+m" (*v) : ASM_DI (i));\
+	__asm__ __volatile__(#asm_op "l %1,%0" : "+m" (*v) : "di" (i));\
 }									\
 
 #ifdef CONFIG_RMW_INSNS
@@ -199,7 +194,7 @@ static inline int atomic_sub_and_test(int i, atomic_t *v)
 	char c;
 	__asm__ __volatile__("subl %2,%1; seq %0"
 			     : "=d" (c), "+m" (*v)
-			     : ASM_DI (i));
+			     : "di" (i));
 	return c != 0;
 }
 #define atomic_sub_and_test atomic_sub_and_test
@@ -209,7 +204,7 @@ static inline int atomic_add_negative(int i, atomic_t *v)
 	char c;
 	__asm__ __volatile__("addl %2,%1; smi %0"
 			     : "=d" (c), "+m" (*v)
-			     : ASM_DI (i));
+			     : "di" (i));
 	return c != 0;
 }
 #define atomic_add_negative atomic_add_negative

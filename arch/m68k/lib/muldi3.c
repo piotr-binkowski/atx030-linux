@@ -17,48 +17,12 @@ GNU General Public License for more details. */
 #include <linux/compiler.h>
 #include <linux/export.h>
 
-#ifdef CONFIG_CPU_HAS_NO_MULDIV64
-
-#define SI_TYPE_SIZE 32
-#define __BITS4 (SI_TYPE_SIZE / 4)
-#define __ll_B (1L << (SI_TYPE_SIZE / 2))
-#define __ll_lowpart(t) ((USItype) (t) % __ll_B)
-#define __ll_highpart(t) ((USItype) (t) / __ll_B)
-
-#define umul_ppmm(w1, w0, u, v)						\
-  do {									\
-    USItype __x0, __x1, __x2, __x3;					\
-    USItype __ul, __vl, __uh, __vh;					\
-									\
-    __ul = __ll_lowpart (u);						\
-    __uh = __ll_highpart (u);						\
-    __vl = __ll_lowpart (v);						\
-    __vh = __ll_highpart (v);						\
-									\
-    __x0 = (USItype) __ul * __vl;					\
-    __x1 = (USItype) __ul * __vh;					\
-    __x2 = (USItype) __uh * __vl;					\
-    __x3 = (USItype) __uh * __vh;					\
-									\
-    __x1 += __ll_highpart (__x0);/* this can't give carry */		\
-    __x1 += __x2;		/* but this indeed can */		\
-    if (__x1 < __x2)		/* did we get it? */			\
-      __x3 += __ll_B;		/* yes, add it in the proper pos. */	\
-									\
-    (w1) = __x3 + __ll_highpart (__x1);					\
-    (w0) = __ll_lowpart (__x1) * __ll_B + __ll_lowpart (__x0);		\
-  } while (0)
-
-#else
-
 #define umul_ppmm(w1, w0, u, v) \
   __asm__ ("mulu%.l %3,%1:%0"						\
            : "=d" ((USItype)(w0)),					\
              "=d" ((USItype)(w1))					\
            : "%0" ((USItype)(u)),					\
              "dmi" ((USItype)(v)))
-
-#endif
 
 #define __umulsidi3(u, v) \
   ({DIunion __w;							\

@@ -17,8 +17,6 @@
 
 #include <asm/pgalloc.h>
 
-#if defined(CONFIG_MMU) && !defined(CONFIG_COLDFIRE)
-
 void *arch_dma_alloc(struct device *dev, size_t size, dma_addr_t *handle,
 		gfp_t flag, unsigned long attrs)
 {
@@ -68,34 +66,6 @@ void arch_dma_free(struct device *dev, size_t size, void *addr,
 	pr_debug("dma_free_coherent: %p, %x\n", addr, handle);
 	vfree(addr);
 }
-
-#else
-
-#include <asm/cacheflush.h>
-
-void *arch_dma_alloc(struct device *dev, size_t size, dma_addr_t *dma_handle,
-		gfp_t gfp, unsigned long attrs)
-{
-	void *ret;
-
-	if (dev == NULL || (*dev->dma_mask < 0xffffffff))
-		gfp |= GFP_DMA;
-	ret = (void *)__get_free_pages(gfp, get_order(size));
-
-	if (ret != NULL) {
-		memset(ret, 0, size);
-		*dma_handle = virt_to_phys(ret);
-	}
-	return ret;
-}
-
-void arch_dma_free(struct device *dev, size_t size, void *vaddr,
-		dma_addr_t dma_handle, unsigned long attrs)
-{
-	free_pages((unsigned long)vaddr, get_order(size));
-}
-
-#endif /* CONFIG_MMU && !CONFIG_COLDFIRE */
 
 void arch_sync_dma_for_device(struct device *dev, phys_addr_t handle,
 		size_t size, enum dma_data_direction dir)

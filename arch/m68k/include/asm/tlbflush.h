@@ -2,8 +2,6 @@
 #ifndef _M68K_TLBFLUSH_H
 #define _M68K_TLBFLUSH_H
 
-#ifdef CONFIG_MMU
-
 #include <asm/current.h>
 
 static inline void flush_tlb_kernel_page(void *addr)
@@ -93,53 +91,5 @@ static inline void flush_tlb_kernel_range(unsigned long start, unsigned long end
 {
 	flush_tlb_all();
 }
-
-#else /* !CONFIG_MMU */
-
-/*
- * flush all user-space atc entries.
- */
-static inline void __flush_tlb(void)
-{
-	BUG();
-}
-
-static inline void __flush_tlb_one(unsigned long addr)
-{
-	BUG();
-}
-
-#define flush_tlb() __flush_tlb()
-
-/*
- * flush all atc entries (both kernel and user-space entries).
- */
-static inline void flush_tlb_all(void)
-{
-	BUG();
-}
-
-static inline void flush_tlb_mm(struct mm_struct *mm)
-{
-	BUG();
-}
-
-static inline void flush_tlb_page(struct vm_area_struct *vma, unsigned long addr)
-{
-	BUG();
-}
-
-static inline void flush_tlb_range(struct mm_struct *mm,
-				   unsigned long start, unsigned long end)
-{
-	BUG();
-}
-
-static inline void flush_tlb_kernel_page(unsigned long addr)
-{
-	BUG();
-}
-
-#endif /* CONFIG_MMU */
 
 #endif /* _M68K_TLBFLUSH_H */

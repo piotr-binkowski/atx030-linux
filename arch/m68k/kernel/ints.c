@@ -22,10 +22,6 @@
 #include <asm/cacheflush.h>
 #include <asm/irq_regs.h>
 
-#ifdef CONFIG_Q40
-#include <asm/q40ints.h>
-#endif
-
 extern u32 auto_irqhandler_fixup[];
 extern u16 user_irqvec_fixup[];
 

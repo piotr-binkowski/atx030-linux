@@ -111,32 +111,6 @@ static struct platform_device i2s_device = {
 	.resource = i2s_res,
 };
 
-#ifdef CONFIG_EARLY_PRINTK
-
-static void atx040_serial_putc(const char c)
-{
-	while(ioread8((void*)ATX040_WB_UART_STATUS) & 0x08);
-	iowrite8(c, (void*)ATX040_WB_UART_DATA);
-}
-
-static void atx040_console_write(struct console *co, const char *s, unsigned int count)
-{
-	while(count--){
-		if(*s == '\n')
-			atx040_serial_putc('\r');
-		atx040_serial_putc(*s++);
-	}
-}
-
-static struct console atx040_console_driver = {
-	.name = "atx040serial",
-	.flags = CON_PRINTBUFFER | CON_BOOT,
-	.index = -1,
-	.write = atx040_console_write,
-};
-
-#endif
-
 static void atx040_get_model(char *model)
 {
 	sprintf(model, "ATX040");
@@ -169,9 +143,6 @@ static void atx040_reset(void)
 
 void __init config_atx040(void)
 {
-#ifdef CONFIG_EARLY_PRINTK
-	register_console(&atx040_console_driver);
-#endif
 	mach_init_IRQ = atx040_init_IRQ;
 	mach_sched_init = atx040_sched_init;
 	mach_get_model = atx040_get_model;

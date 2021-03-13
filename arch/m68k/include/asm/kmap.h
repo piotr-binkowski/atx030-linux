@@ -2,8 +2,6 @@
 #ifndef _KMAP_H
 #define _KMAP_H
 
-#ifdef CONFIG_MMU
-
 #define ARCH_HAS_IOREMAP_WT
 
 /* Values for nocacheflag and cmode */
@@ -70,8 +68,6 @@ static inline void memcpy_toio(volatile void __iomem *dst, const void *src,
 {
 	__builtin_memcpy((void __force *) dst, src, count);
 }
-
-#endif /* CONFIG_MMU */
 
 #define ioport_map ioport_map
 static inline void __iomem *ioport_map(unsigned long port, unsigned int nr)

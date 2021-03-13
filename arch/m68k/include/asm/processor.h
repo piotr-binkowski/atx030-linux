@@ -15,44 +15,24 @@
 
 static inline unsigned long rdusp(void)
 {
-#ifdef CONFIG_COLDFIRE_SW_A7
-	extern unsigned int sw_usp;
-	return sw_usp;
-#else
 	register unsigned long usp __asm__("a0");
 	/* move %usp,%a0 */
 	__asm__ __volatile__(".word 0x4e68" : "=a" (usp));
 	return usp;
-#endif
 }
 
 static inline void wrusp(unsigned long usp)
 {
-#ifdef CONFIG_COLDFIRE_SW_A7
-	extern unsigned int sw_usp;
-	sw_usp = usp;
-#else
 	register unsigned long a0 __asm__("a0") = usp;
 	/* move %a0,%usp */
 	__asm__ __volatile__(".word 0x4e60" : : "a" (a0) );
-#endif
 }
 
 /*
  * User space process size: 3.75GB. This is hardcoded into a few places,
  * so don't change it unless you know what you are doing.
  */
-#ifdef CONFIG_MMU
-#if defined(CONFIG_COLDFIRE)
-#define TASK_SIZE	(0xC0000000UL)
-#elif defined(CONFIG_SUN3)
-#define TASK_SIZE	(0x0E000000UL)
-#else
 #define TASK_SIZE	(0xF0000000UL)
-#endif
-#else
-#define TASK_SIZE	(0xFFFFFFFFUL)
-#endif
 
 #ifdef __KERNEL__
 #define STACK_TOP	TASK_SIZE
@@ -62,18 +42,8 @@ static inline void wrusp(unsigned long usp)
 /* This decides where the kernel will search for a free chunk of vm
  * space during mmap's.
  */
-#ifdef CONFIG_MMU
-#if defined(CONFIG_COLDFIRE)
-#define TASK_UNMAPPED_BASE	0x60000000UL
-#elif defined(CONFIG_SUN3)
-#define TASK_UNMAPPED_BASE	0x0A000000UL
-#else
 #define TASK_UNMAPPED_BASE	0xC0000000UL
-#endif
 #define TASK_UNMAPPED_ALIGN(addr, off)	PAGE_ALIGN(addr)
-#else
-#define TASK_UNMAPPED_BASE	0
-#endif
 
 struct thread_struct {
 	unsigned long  ksp;		/* kernel stack pointer */
@@ -95,15 +65,7 @@ struct thread_struct {
 	.fs	= __KERNEL_DS,						\
 }
 
-/*
- * ColdFire stack format sbould be 0x4 for an aligned usp (will always be
- * true on thread creation). We need to set this explicitly.
- */
-#ifdef CONFIG_COLDFIRE
-#define setframeformat(_regs)	do { (_regs)->format = 0x4; } while(0)
-#else
 #define setframeformat(_regs)	do { } while (0)
-#endif
 
 /*
  * Do necessary setup to start up a newly executed thread.

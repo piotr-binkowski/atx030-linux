@@ -11,30 +11,9 @@
  * Delay routines, using a pre-computed "loops_per_jiffy" value.
  */
 
-#if defined(CONFIG_COLDFIRE)
-/*
- * The ColdFire runs the delay loop at significantly different speeds
- * depending upon long word alignment or not.  We'll pad it to
- * long word alignment which is the faster version.
- * The 0x4a8e is of course a 'tstl %fp' instruction.  This is better
- * than using a NOP (0x4e71) instruction because it executes in one
- * cycle not three and doesn't allow for an arbitrary delay waiting
- * for bus cycles to finish.  Also fp/a6 isn't likely to cause a
- * stall waiting for the register to become valid if such is added
- * to the coldfire at some stage.
- */
-#define	DELAY_ALIGN	".balignw 4, 0x4a8e\n\t"
-#else
-/*
- * No instruction alignment required for other m68k types.
- */
-#define	DELAY_ALIGN
-#endif
-
 static inline void __delay(unsigned long loops)
 {
 	__asm__ __volatile__ (
-		DELAY_ALIGN
 		"1: subql #1,%0\n\t"
 		"jcc 1b"
 		: "=d" (loops)
@@ -43,19 +22,6 @@ static inline void __delay(unsigned long loops)
 
 extern void __bad_udelay(void);
 
-
-#ifdef CONFIG_CPU_HAS_NO_MULDIV64
-/*
- * The simpler m68k and ColdFire processors do not have a 32*32->64
- * multiply instruction. So we need to handle them a little differently.
- * We use a bit of shifting and a single 32*32->32 multiply to get close.
- */
-#define	HZSCALE		(268435456 / (1000000 / HZ))
-
-#define	__const_udelay(u) \
-	__delay(((((u) * HZSCALE) >> 11) * (loops_per_jiffy >> 11)) >> 6)
-
-#else
 
 static inline void __xdelay(unsigned long xloops)
 {
@@ -73,8 +39,6 @@ static inline void __xdelay(unsigned long xloops)
  * the delay is a const.
  */
 #define	__const_udelay(n)	(__xdelay((n) * 4295))
-
-#endif
 
 static inline void __udelay(unsigned long usecs)
 {

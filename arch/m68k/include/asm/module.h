@@ -18,8 +18,6 @@ struct mod_arch_specific {
 	struct m68k_fixup_info *fixup_start, *fixup_end;
 };
 
-#ifdef CONFIG_MMU
-
 #define MODULE_ARCH_INIT {				\
 	.fixup_start		= __start_fixup,	\
 	.fixup_end		= __stop_fixup,		\
@@ -30,8 +28,6 @@ struct mod_arch_specific {
 	"	.section \".m68k_fixup\",\"aw\"\n"	\
 	"	.long " #type "," #addr "\n"	\
 	"	.previous\n"
-
-#endif /* CONFIG_MMU */
 
 extern struct m68k_fixup_info __start_fixup[], __stop_fixup[];
 

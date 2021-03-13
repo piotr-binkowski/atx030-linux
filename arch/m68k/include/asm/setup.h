@@ -112,8 +112,6 @@ extern int m68k_is040or060;
 #  endif
 #endif
 
-#define CPU_IS_COLDFIRE (0)
-
 #define CPU_TYPE (m68k_cputype)
 
 #define FPU_IS_EMU (0)

@@ -30,8 +30,6 @@
 #include <asm/dma.h>
 #include <asm/sections.h>
 
-#undef DEBUG
-
 #ifndef mm_cachebits
 /*
  * Bits to add to page descriptors for "normal" caching mode.
@@ -84,9 +82,6 @@ static pmd_t * __init kernel_ptr_table(void)
 		}
 
 		last_pgtable = (pmd_t *)last;
-#ifdef DEBUG
-		printk("kernel_ptr_init: %p\n", last_pgtable);
-#endif
 	}
 
 	last_pgtable += PTRS_PER_PMD;
@@ -121,18 +116,10 @@ static void __init map_node(int node)
 		physaddr |= _PAGE_GLOBAL040;
 
 	while (size > 0) {
-#ifdef DEBUG
-		if (!(virtaddr & (PTRTREESIZE-1)))
-			printk ("\npa=%#lx va=%#lx ", physaddr & PAGE_MASK,
-				virtaddr);
-#endif
 		pgd_dir = pgd_offset_k(virtaddr);
 		if (virtaddr && CPU_IS_020_OR_030) {
 			if (!(virtaddr & (ROOTTREESIZE-1)) &&
 			    size >= ROOTTREESIZE) {
-#ifdef DEBUG
-				printk ("[very early term]");
-#endif
 				pgd_val(*pgd_dir) = physaddr;
 				size -= ROOTTREESIZE;
 				virtaddr += ROOTTREESIZE;
@@ -142,25 +129,16 @@ static void __init map_node(int node)
 		}
 		if (!pgd_present(*pgd_dir)) {
 			pmd_dir = kernel_ptr_table();
-#ifdef DEBUG
-			printk ("[new pointer %p]", pmd_dir);
-#endif
 			pgd_set(pgd_dir, pmd_dir);
 		} else
 			pmd_dir = pmd_offset(pgd_dir, virtaddr);
 
 		if (CPU_IS_020_OR_030) {
 			if (virtaddr) {
-#ifdef DEBUG
-				printk ("[early term]");
-#endif
 				pmd_dir->pmd[(virtaddr/PTRTREESIZE) & 15] = physaddr;
 				physaddr += PTRTREESIZE;
 			} else {
 				int i;
-#ifdef DEBUG
-				printk ("[zero map]");
-#endif
 				zero_pgtable = kernel_ptr_table();
 				pte_dir = (pte_t *)zero_pgtable;
 				pmd_dir->pmd[0] = virt_to_phys(pte_dir) |
@@ -174,9 +152,6 @@ static void __init map_node(int node)
 			virtaddr += PTRTREESIZE;
 		} else {
 			if (!pmd_present(*pmd_dir)) {
-#ifdef DEBUG
-				printk ("[new table]");
-#endif
 				pte_dir = kernel_page_table();
 				pmd_set(pmd_dir, pte_dir);
 			}
@@ -193,9 +168,6 @@ static void __init map_node(int node)
 		}
 
 	}
-#ifdef DEBUG
-	printk("\n");
-#endif
 }
 
 /*
@@ -208,10 +180,6 @@ void __init paging_init(void)
 	unsigned long min_addr, max_addr;
 	unsigned long addr;
 	int i;
-
-#ifdef DEBUG
-	printk ("start of paging_init (%p, %lx)\n", kernel_pg_dir, availmem);
-#endif
 
 	/* Fix the cache mode in the page descriptors for the 680[46]0.  */
 	if (CPU_IS_040_OR_060) {
@@ -281,9 +249,6 @@ void __init paging_init(void)
 	 */
 	set_fs(KERNEL_DS);
 
-#ifdef DEBUG
-	printk ("before free_area_init\n");
-#endif
 	for (i = 0; i < m68k_num_memory; i++) {
 		zones_size[ZONE_DMA] = m68k_memory[i].size >> PAGE_SHIFT;
 		free_area_init_node(i, zones_size,

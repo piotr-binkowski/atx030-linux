@@ -56,11 +56,7 @@ int main(void)
 	DEFINE(PT_OFF_SR, offsetof(struct pt_regs, sr));
 
 	/* bitfields are a bit difficult */
-#ifdef CONFIG_COLDFIRE
-	DEFINE(PT_OFF_FORMATVEC, offsetof(struct pt_regs, sr) - 2);
-#else
 	DEFINE(PT_OFF_FORMATVEC, offsetof(struct pt_regs, pc) + 4);
-#endif
 
 	/* offsets into the irq_cpustat_t struct */
 	DEFINE(CPUSTAT_SOFTIRQ_PENDING, offsetof(irq_cpustat_t, __softirq_pending));
@@ -71,12 +67,10 @@ int main(void)
 	DEFINE(LSIGTRAP, SIGTRAP);
 	DEFINE(LTRAP_TRACE, TRAP_TRACE);
 
-#ifdef CONFIG_MMU
 	/* offsets into the bi_record struct */
 	DEFINE(BIR_TAG, offsetof(struct bi_record, tag));
 	DEFINE(BIR_SIZE, offsetof(struct bi_record, size));
 	DEFINE(BIR_DATA, offsetof(struct bi_record, data));
-#endif
 
 	return 0;
 }

@@ -146,13 +146,11 @@ void user_enable_single_step(struct task_struct *child)
 	set_tsk_thread_flag(child, TIF_DELAYED_TRACE);
 }
 
-#ifdef CONFIG_MMU
 void user_enable_block_step(struct task_struct *child)
 {
 	unsigned long tmp = get_reg(child, PT_SR) & ~TRACE_BITS;
 	put_reg(child, PT_SR, tmp | T0_BIT);
 }
-#endif
 
 void user_disable_single_step(struct task_struct *child)
 {
@@ -183,14 +181,6 @@ long arch_ptrace(struct task_struct *child, long request,
 			if (FPU_IS_EMU && (regno < 45) && !(regno % 3))
 				tmp = ((tmp & 0xffff0000) << 15) |
 				      ((tmp & 0x0000ffff) << 16);
-#ifndef CONFIG_MMU
-		} else if (regno == 49) {
-			tmp = child->mm->start_code;
-		} else if (regno == 50) {
-			tmp = child->mm->start_data;
-		} else if (regno == 51) {
-			tmp = child->mm->end_code;
-#endif
 		} else
 			goto out_eio;
 		ret = put_user(tmp, datap);
@@ -286,20 +276,3 @@ asmlinkage void syscall_trace(void)
 		current->exit_code = 0;
 	}
 }
-
-#if defined(CONFIG_COLDFIRE) || !defined(CONFIG_MMU)
-asmlinkage int syscall_trace_enter(void)
-{
-	int ret = 0;
-
-	if (test_thread_flag(TIF_SYSCALL_TRACE))
-		ret = tracehook_report_syscall_entry(task_pt_regs(current));
-	return ret;
-}
-
-asmlinkage void syscall_trace_leave(void)
-{
-	if (test_thread_flag(TIF_SYSCALL_TRACE))
-		tracehook_report_syscall_exit(task_pt_regs(current), 0);
-}
-#endif /* CONFIG_COLDFIRE */

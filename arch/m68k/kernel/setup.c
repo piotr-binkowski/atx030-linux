@@ -96,8 +96,6 @@ static void __init m68k_parse_bootinfo(const struct bi_record *record)
 {
 	uint16_t tag;
 
-	save_bootinfo(record);
-
 	while ((tag = be16_to_cpu(record->tag)) != BI_LAST) {
 		int unknown = 0;
 		const void *data = record->data;
@@ -169,18 +167,11 @@ void __init setup_arch(char **cmdline_p)
 	else if (CPU_IS_060)
 		m68k_is040or060 = 6;
 
-	/* FIXME: m68k_fputype is passed in by Penguin booter, which can
-	 * be confused by software FPU emulation. BEWARE.
-	 * We should really do our own FPU check at startup.
-	 * [what do we do with buggy 68LC040s? if we have problems
-	 *  with them, we should add a test to check_bugs() below] */
-#if defined(CONFIG_FPU) && !defined(CONFIG_M68KFPU_EMU_ONLY)
 	/* clear the fpu if we have one */
-	if (m68k_fputype & (FPU_68881|FPU_68882|FPU_68040|FPU_68060|FPU_COLDFIRE)) {
+	if (m68k_fputype & (FPU_68881|FPU_68882|FPU_68040|FPU_68060)) {
 		volatile int zero = 0;
 		asm volatile ("frestore %0" : : "m" (zero));
 	}
-#endif
 
 	if (CPU_IS_060) {
 		u32 pcr;
@@ -203,7 +194,6 @@ void __init setup_arch(char **cmdline_p)
 	strncpy(m68k_command_line, CONFIG_BOOTPARAM_STRING, CL_SIZE);
 	m68k_command_line[CL_SIZE - 1] = 0;
 #endif /* CONFIG_BOOTPARAM */
-	process_uboot_commandline(&m68k_command_line[0], CL_SIZE);
 	*cmdline_p = m68k_command_line;
 	memcpy(boot_command_line, *cmdline_p, CL_SIZE);
 
@@ -225,7 +215,6 @@ void __init setup_arch(char **cmdline_p)
 
 	paging_init();
 
-#ifndef CONFIG_SUN3
 #ifdef CONFIG_BLK_DEV_INITRD
 	if (m68k_ramdisk.size) {
 		memblock_reserve(m68k_ramdisk.addr, m68k_ramdisk.size);
@@ -235,8 +224,6 @@ void __init setup_arch(char **cmdline_p)
 	}
 #endif
 
-#endif /* !CONFIG_SUN3 */
-
 }
 
 static int show_cpuinfo(struct seq_file *m, void *v)
@@ -244,15 +231,11 @@ static int show_cpuinfo(struct seq_file *m, void *v)
 	const char *cpu, *mmu, *fpu;
 	unsigned long clockfreq, clockfactor;
 
-#define LOOP_CYCLES_68020	(8)
 #define LOOP_CYCLES_68030	(8)
 #define LOOP_CYCLES_68040	(3)
 #define LOOP_CYCLES_68060	(1)
 
-	if (CPU_IS_020) {
-		cpu = "68020";
-		clockfactor = LOOP_CYCLES_68020;
-	} else if (CPU_IS_030) {
+	if (CPU_IS_030) {
 		cpu = "68030";
 		clockfactor = LOOP_CYCLES_68030;
 	} else if (CPU_IS_040) {
@@ -266,9 +249,6 @@ static int show_cpuinfo(struct seq_file *m, void *v)
 		clockfactor = 0;
 	}
 
-#ifdef CONFIG_M68KFPU_EMU_ONLY
-	fpu = "none(soft float)";
-#else
 	if (m68k_fputype & FPU_68881)
 		fpu = "68881";
 	else if (m68k_fputype & FPU_68882)
@@ -279,11 +259,8 @@ static int show_cpuinfo(struct seq_file *m, void *v)
 		fpu = "68060";
 	else
 		fpu = "none";
-#endif
 
-	if (m68k_mmutype & MMU_68851)
-		mmu = "68851";
-	else if (m68k_mmutype & MMU_68030)
+	if (m68k_mmutype & MMU_68030)
 		mmu = "68030";
 	else if (m68k_mmutype & MMU_68040)
 		mmu = "68040";
@@ -328,13 +305,4 @@ const struct seq_operations cpuinfo_op = {
 
 void check_bugs(void)
 {
-#if defined(CONFIG_FPU) && !defined(CONFIG_M68KFPU_EMU)
-	if (m68k_fputype == 0) {
-		pr_emerg("*** YOU DO NOT HAVE A FLOATING POINT UNIT, "
-			"WHICH IS REQUIRED BY LINUX/M68K ***\n");
-		pr_emerg("Upgrade your hardware or join the FPU "
-			"emulation project\n");
-		panic("no FPU");
-	}
-#endif /* !CONFIG_M68KFPU_EMU */
 }

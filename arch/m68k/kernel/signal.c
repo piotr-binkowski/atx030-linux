@@ -253,18 +253,6 @@ static inline int rt_restore_fpu_state(struct ucontext __user *uc)
 	fpregset_t fpregs;
 	int err = 1;
 
-	if (FPU_IS_EMU) {
-		/* restore fpu control register */
-		if (__copy_from_user(current->thread.fpcntl,
-				uc->uc_mcontext.fpregs.f_fpcntl, 12))
-			goto out;
-		/* restore all other fpu register */
-		if (__copy_from_user(current->thread.fp,
-				uc->uc_mcontext.fpregs.f_fpregs, 96))
-			goto out;
-		return 0;
-	}
-
 	if (__get_user(*(long *)fpstate, (long __user *)&uc->uc_fpstate))
 		goto out;
 	if (CPU_IS_060 ? fpstate[2] : fpstate[0]) {

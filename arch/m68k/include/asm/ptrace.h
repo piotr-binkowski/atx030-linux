@@ -20,9 +20,7 @@
 
 #define arch_has_single_step()	(1)
 
-#ifdef CONFIG_MMU
 #define arch_has_block_step()	(1)
-#endif
 
 #endif /* __ASSEMBLY__ */
 #endif /* _M68K_PTRACE_H */

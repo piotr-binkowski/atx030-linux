@@ -2,10 +2,6 @@
 #ifndef _M68K_DIV64_H
 #define _M68K_DIV64_H
 
-#ifdef CONFIG_CPU_HAS_NO_MULDIV64
-#include <asm-generic/div64.h>
-#else
-
 #include <linux/types.h>
 
 /* n = n / base; return rem; */
@@ -30,7 +26,5 @@
 	(n) = __n.n64;						\
 	__rem;							\
 })
-
-#endif /* CONFIG_CPU_HAS_NO_MULDIV64 */
 
 #endif /* _M68K_DIV64_H */

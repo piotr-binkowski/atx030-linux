@@ -369,9 +369,6 @@ static inline void bus_error030 (struct frame *fp)
 	unsigned short mmusr;
 	unsigned long addr, errorcode;
 	unsigned short ssw = fp->un.fmtb.ssw;
-#ifdef DEBUG
-	unsigned long desc;
-#endif
 
 	pr_debug("pid = %x  ", current->pid);
 	pr_debug("SSW=%#06x  ", ssw);
@@ -395,20 +392,9 @@ static inline void bus_error030 (struct frame *fp)
 	if (ssw & DF) {
 		addr = fp->un.fmtb.daddr;
 
-#ifdef DEBUG
-		asm volatile ("ptestr %3,%2@,#7,%0\n\t"
-			      "pmove %%psr,%1"
-			      : "=a&" (desc), "=m" (temp)
-			      : "a" (addr), "d" (ssw));
-		pr_debug("mmusr is %#x for addr %#lx in task %p\n",
-			 temp, addr, current);
-		pr_debug("descriptor address is 0x%p, contents %#lx\n",
-			 __va(desc), *(unsigned long *)__va(desc));
-#else
 		asm volatile ("ptestr %2,%1@,#7\n\t"
 			      "pmove %%psr,%0"
 			      : "=m" (temp) : "a" (addr), "d" (ssw));
-#endif
 		mmusr = temp;
 		errorcode = (mmusr & MMU_I) ? 0 : 1;
 		if (!(ssw & RW) || (ssw & RM))
@@ -503,20 +489,9 @@ static inline void bus_error030 (struct frame *fp)
 		   should still create the ATC entry.  */
 		goto create_atc_entry;
 
-#ifdef DEBUG
-	asm volatile ("ptestr #1,%2@,#7,%0\n\t"
-		      "pmove %%psr,%1"
-		      : "=a&" (desc), "=m" (temp)
-		      : "a" (addr));
-	pr_debug("mmusr is %#x for addr %#lx in task %p\n",
-		temp, addr, current);
-	pr_debug("descriptor address is 0x%p, contents %#lx\n",
-		__va(desc), *(unsigned long *)__va(desc));
-#else
 	asm volatile ("ptestr #1,%1@,#7\n\t"
 		      "pmove %%psr,%0"
 		      : "=m" (temp) : "a" (addr));
-#endif
 	mmusr = temp;
 	if (mmusr & MMU_I)
 		do_page_fault (&fp->ptregs, addr, 0);
@@ -778,10 +753,8 @@ asmlinkage void trap_c(struct frame *fp)
 			 */
 			return;
 		}
-#ifdef CONFIG_MMU
 		if (fixup_exception(&fp->ptregs))
 			return;
-#endif
 		bad_super_trap(fp);
 		return;
 	}

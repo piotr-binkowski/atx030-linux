@@ -112,7 +112,6 @@ int module_finalize(const Elf_Ehdr *hdr,
 void module_fixup(struct module *mod, struct m68k_fixup_info *start,
 		  struct m68k_fixup_info *end)
 {
-#ifdef CONFIG_MMU
 	struct m68k_fixup_info *fixup;
 
 	for (fixup = start; fixup < end; fixup++) {
@@ -125,5 +124,4 @@ void module_fixup(struct module *mod, struct m68k_fixup_info *start,
 			break;
 		}
 	}
-#endif
 }

@@ -44,6 +44,7 @@ libs-y				+= arch/m68k/lib/
 
 core-$(CONFIG_ATX040)		+= arch/m68k/atx040/
 core-$(CONFIG_M68040)		+= arch/m68k/fpsp040/
+core-$(CONFIG_M68060)		+= arch/m68k/ifpsp060/
 
 all:	vmlinux
 

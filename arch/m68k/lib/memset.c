@@ -32,10 +32,6 @@ void *memset(void *s, int c, size_t count)
 	temp = count >> 2;
 	if (temp) {
 		long *ls = s;
-#if defined(CONFIG_M68000) || defined(CONFIG_COLDFIRE)
-		for (; temp; temp--)
-			*ls++ = c;
-#else
 		size_t temp1;
 		asm volatile (
 			"	movel %1,%2\n"
@@ -57,7 +53,6 @@ void *memset(void *s, int c, size_t count)
 			"	jpl   1b"
 			: "=a" (ls), "=d" (temp), "=&d" (temp1)
 			: "d" (c), "0" (ls), "1" (temp));
-#endif
 		s = ls;
 	}
 	if (count & 2) {

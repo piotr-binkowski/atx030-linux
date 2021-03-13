@@ -55,15 +55,9 @@ static inline void bfset_mem_set_bit(int nr, volatile unsigned long *vaddr)
 		: "memory");
 }
 
-#if defined(CONFIG_COLDFIRE)
-#define	set_bit(nr, vaddr)	bset_reg_set_bit(nr, vaddr)
-#elif defined(CONFIG_CPU_HAS_NO_BITFIELDS)
-#define	set_bit(nr, vaddr)	bset_mem_set_bit(nr, vaddr)
-#else
 #define set_bit(nr, vaddr)	(__builtin_constant_p(nr) ? \
 				bset_mem_set_bit(nr, vaddr) : \
 				bfset_mem_set_bit(nr, vaddr))
-#endif
 
 #define __set_bit(nr, vaddr)	set_bit(nr, vaddr)
 
@@ -95,15 +89,9 @@ static inline void bfclr_mem_clear_bit(int nr, volatile unsigned long *vaddr)
 		: "memory");
 }
 
-#if defined(CONFIG_COLDFIRE)
-#define	clear_bit(nr, vaddr)	bclr_reg_clear_bit(nr, vaddr)
-#elif defined(CONFIG_CPU_HAS_NO_BITFIELDS)
-#define	clear_bit(nr, vaddr)	bclr_mem_clear_bit(nr, vaddr)
-#else
 #define clear_bit(nr, vaddr)	(__builtin_constant_p(nr) ? \
 				bclr_mem_clear_bit(nr, vaddr) : \
 				bfclr_mem_clear_bit(nr, vaddr))
-#endif
 
 #define __clear_bit(nr, vaddr)	clear_bit(nr, vaddr)
 
@@ -135,15 +123,9 @@ static inline void bfchg_mem_change_bit(int nr, volatile unsigned long *vaddr)
 		: "memory");
 }
 
-#if defined(CONFIG_COLDFIRE)
-#define	change_bit(nr, vaddr)	bchg_reg_change_bit(nr, vaddr)
-#elif defined(CONFIG_CPU_HAS_NO_BITFIELDS)
-#define	change_bit(nr, vaddr)	bchg_mem_change_bit(nr, vaddr)
-#else
 #define change_bit(nr, vaddr)	(__builtin_constant_p(nr) ? \
 				bchg_mem_change_bit(nr, vaddr) : \
 				bfchg_mem_change_bit(nr, vaddr))
-#endif
 
 #define __change_bit(nr, vaddr)	change_bit(nr, vaddr)
 
@@ -191,15 +173,9 @@ static inline int bfset_mem_test_and_set_bit(int nr,
 	return retval;
 }
 
-#if defined(CONFIG_COLDFIRE)
-#define	test_and_set_bit(nr, vaddr)	bset_reg_test_and_set_bit(nr, vaddr)
-#elif defined(CONFIG_CPU_HAS_NO_BITFIELDS)
-#define	test_and_set_bit(nr, vaddr)	bset_mem_test_and_set_bit(nr, vaddr)
-#else
 #define test_and_set_bit(nr, vaddr)	(__builtin_constant_p(nr) ? \
 					bset_mem_test_and_set_bit(nr, vaddr) : \
 					bfset_mem_test_and_set_bit(nr, vaddr))
-#endif
 
 #define __test_and_set_bit(nr, vaddr)	test_and_set_bit(nr, vaddr)
 
@@ -241,15 +217,9 @@ static inline int bfclr_mem_test_and_clear_bit(int nr,
 	return retval;
 }
 
-#if defined(CONFIG_COLDFIRE)
-#define	test_and_clear_bit(nr, vaddr)	bclr_reg_test_and_clear_bit(nr, vaddr)
-#elif defined(CONFIG_CPU_HAS_NO_BITFIELDS)
-#define	test_and_clear_bit(nr, vaddr)	bclr_mem_test_and_clear_bit(nr, vaddr)
-#else
 #define test_and_clear_bit(nr, vaddr)	(__builtin_constant_p(nr) ? \
 					bclr_mem_test_and_clear_bit(nr, vaddr) : \
 					bfclr_mem_test_and_clear_bit(nr, vaddr))
-#endif
 
 #define __test_and_clear_bit(nr, vaddr)	test_and_clear_bit(nr, vaddr)
 
@@ -291,15 +261,9 @@ static inline int bfchg_mem_test_and_change_bit(int nr,
 	return retval;
 }
 
-#if defined(CONFIG_COLDFIRE)
-#define	test_and_change_bit(nr, vaddr)	bchg_reg_test_and_change_bit(nr, vaddr)
-#elif defined(CONFIG_CPU_HAS_NO_BITFIELDS)
-#define	test_and_change_bit(nr, vaddr)	bchg_mem_test_and_change_bit(nr, vaddr)
-#else
 #define test_and_change_bit(nr, vaddr)	(__builtin_constant_p(nr) ? \
 					bchg_mem_test_and_change_bit(nr, vaddr) : \
 					bfchg_mem_test_and_change_bit(nr, vaddr))
-#endif
 
 #define __test_and_change_bit(nr, vaddr) test_and_change_bit(nr, vaddr)
 
@@ -310,10 +274,6 @@ static inline int bfchg_mem_test_and_change_bit(int nr,
  *	(including CPU32) do not support this. They simply use the generic
  *	functions.
  */
-#if defined(CONFIG_CPU_HAS_NO_BITFIELDS)
-#include <asm-generic/bitops/ffz.h>
-#else
-
 static inline int find_first_zero_bit(const unsigned long *vaddr,
 				      unsigned size)
 {
@@ -438,46 +398,9 @@ static inline unsigned long ffz(unsigned long word)
 	return res ^ 31;
 }
 
-#endif
-
 #include <asm-generic/bitops/find.h>
 
 #ifdef __KERNEL__
-
-#if defined(CONFIG_CPU_HAS_NO_BITFIELDS)
-
-/*
- *	The newer ColdFire family members support a "bitrev" instruction
- *	and we can use that to implement a fast ffs. Older Coldfire parts,
- *	and normal 68000 parts don't have anything special, so we use the
- *	generic functions for those.
- */
-#if (defined(__mcfisaaplus__) || defined(__mcfisac__)) && \
-	!defined(CONFIG_M68000) && !defined(CONFIG_MCPU32)
-static inline unsigned long __ffs(unsigned long x)
-{
-	__asm__ __volatile__ ("bitrev %0; ff1 %0"
-		: "=d" (x)
-		: "0" (x));
-	return x;
-}
-
-static inline int ffs(int x)
-{
-	if (!x)
-		return 0;
-	return __ffs(x) + 1;
-}
-
-#else
-#include <asm-generic/bitops/ffs.h>
-#include <asm-generic/bitops/__ffs.h>
-#endif
-
-#include <asm-generic/bitops/fls.h>
-#include <asm-generic/bitops/__fls.h>
-
-#else
 
 /*
  *	ffs: find first bit set. This is defined the same way as
@@ -516,8 +439,6 @@ static inline int __fls(int x)
 {
 	return fls(x) - 1;
 }
-
-#endif
 
 /* Simple test-and-set bit locks */
 #define test_and_set_bit_lock	test_and_set_bit

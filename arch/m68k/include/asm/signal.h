@@ -21,7 +21,6 @@ typedef struct {
 
 #include <asm/sigcontext.h>
 
-#ifndef CONFIG_CPU_HAS_NO_BITFIELDS
 #define __HAVE_ARCH_SIG_BITOPS
 
 static inline void sigaddset(sigset_t *set, int _sig)
@@ -60,7 +59,5 @@ static inline int __gen_sigismember(sigset_t *set, int _sig)
 	(__builtin_constant_p(sig) ?		\
 	 __const_sigismember(set,sig) :		\
 	 __gen_sigismember(set,sig))
-
-#endif /* !CONFIG_CPU_HAS_NO_BITFIELDS */
 
 #endif /* _M68K_SIGNAL_H */

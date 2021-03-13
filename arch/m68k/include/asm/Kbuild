@@ -1,4 +1,6 @@
 generated-y += syscall_table.h
+generic-y += bugs.h
+generic-y += fb.h
 generic-y += barrier.h
 generic-y += compat.h
 generic-y += device.h

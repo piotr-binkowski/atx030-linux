@@ -89,8 +89,6 @@
  * Non-MMU systems do not reserve %a2 in this way, and this definition is
  * not used for them.
  */
-#ifdef CONFIG_MMU
-
 #define curptr a2
 
 #define GET_CURRENT(tmp) get_current tmp
@@ -100,12 +98,6 @@
 	movel	\reg,%curptr
 	movel	%curptr@,%curptr
 .endm
-
-#else
-
-#define GET_CURRENT(tmp)
-
-#endif /* CONFIG_MMU */
 
 #else /* C source */
 

@@ -30,8 +30,6 @@
 #include <asm/unistd.h>
 #include <asm/cacheflush.h>
 
-#ifdef CONFIG_MMU
-
 #include <asm/tlb.h>
 
 asmlinkage int do_page_fault(struct pt_regs *regs, unsigned long address,
@@ -517,37 +515,6 @@ sys_atomic_cmpxchg_32(unsigned long newval, int oldval, int d3, int d4, int d5,
 		}
 	}
 }
-
-#else
-
-/* sys_cacheflush -- flush (part of) the processor cache.  */
-asmlinkage int
-sys_cacheflush (unsigned long addr, int scope, int cache, unsigned long len)
-{
-	flush_cache_all();
-	return 0;
-}
-
-/* This syscall gets its arguments in A0 (mem), D2 (oldval) and
-   D1 (newval).  */
-asmlinkage int
-sys_atomic_cmpxchg_32(unsigned long newval, int oldval, int d3, int d4, int d5,
-		      unsigned long __user * mem)
-{
-	struct mm_struct *mm = current->mm;
-	unsigned long mem_value;
-
-	down_read(&mm->mmap_sem);
-
-	mem_value = *mem;
-	if (mem_value == oldval)
-		*mem = newval;
-
-	up_read(&mm->mmap_sem);
-	return mem_value;
-}
-
-#endif /* CONFIG_MMU */
 
 asmlinkage int sys_getpagesize(void)
 {
