@@ -315,7 +315,6 @@ func_define	mmu_engage
 func_define	mmu_get_root_table_entry,1
 func_define	mmu_get_ptr_table_entry,2
 func_define	mmu_get_page_table_entry,2
-func_define	mmu_print
 func_define	get_new_page
 
 .macro	mmu_map_eq	arg1,arg2,arg3
@@ -521,8 +520,11 @@ L(save_cachetype):
 #ifdef CONFIG_ATX040
 	is_not_atx040(L(notatx040))
 
-	mmu_map_tt	#0,#0xC0000000,#0x40000000,#_PAGE_NOCACHE_S
-	mmu_map_tt	#1,#0xC0000000,#0x40000000,#_PAGE_NOCACHE_S
+	move.l #0, %d0
+	movec.l %d0, %dtt0
+	movec.l %d0, %dtt1
+	movec.l %d0, %itt0
+	movec.l %d0, %itt1
 
 	jbra	L(mmu_init_done)
 

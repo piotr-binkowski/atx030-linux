@@ -5,6 +5,11 @@
 
 void __init atx040_init_IRQ(void)
 {
+	void __iomem *irqc_base;
+
 	m68k_setup_user_interrupt(VEC_USER, 32);
-	writel(0xFFFFFFFF, ATX040_IRQC_BASE);
+
+	irqc_base = ioremap(ATX040_IRQC_BASE, 0x100);
+	
+	writel(0xFFFFFFFF, irqc_base);
 }
