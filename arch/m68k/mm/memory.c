@@ -201,9 +201,7 @@ static inline void pushcl040(unsigned long paddr)
 
 void cache_clear (unsigned long paddr, int len)
 {
-    if (CPU_IS_COLDFIRE) {
-	clear_cf_bcache(0, DCACHE_MAX_ADDR);
-    } else if (CPU_IS_040_OR_060) {
+    if (CPU_IS_040_OR_060) {
 	int tmp;
 
 	/*
@@ -227,16 +225,13 @@ void cache_clear (unsigned long paddr, int len)
 	    /* a page boundary gets crossed at the end */
 	    pushcl040(paddr);
     }
-    else /* 68030 or 68020 */
+    else {/* 68030 or 68020 */
 	asm volatile ("movec %/cacr,%/d0\n\t"
 		      "oriw %0,%/d0\n\t"
 		      "movec %/d0,%/cacr"
 		      : : "i" (FLUSH_I_AND_D)
 		      : "d0");
-#ifdef CONFIG_M68K_L2_CACHE
-    if(mach_l2_flush)
-	mach_l2_flush(0);
-#endif
+    }
 }
 EXPORT_SYMBOL(cache_clear);
 
@@ -250,9 +245,7 @@ EXPORT_SYMBOL(cache_clear);
 
 void cache_push (unsigned long paddr, int len)
 {
-    if (CPU_IS_COLDFIRE) {
-	flush_cf_bcache(0, DCACHE_MAX_ADDR);
-    } else if (CPU_IS_040_OR_060) {
+    if (CPU_IS_040_OR_060) {
 	int tmp = PAGE_SIZE;
 
 	/*
@@ -282,16 +275,13 @@ void cache_push (unsigned long paddr, int len)
      * flushing the icache is appropriate; flushing the dcache shouldn't
      * be required.
      */
-    else /* 68030 or 68020 */
+    else { /* 68030 or 68020 */
 	asm volatile ("movec %/cacr,%/d0\n\t"
 		      "oriw %0,%/d0\n\t"
 		      "movec %/d0,%/cacr"
 		      : : "i" (FLUSH_I)
 		      : "d0");
-#ifdef CONFIG_M68K_L2_CACHE
-    if(mach_l2_flush)
-	mach_l2_flush(1);
-#endif
+    }
 }
 EXPORT_SYMBOL(cache_push);
 

@@ -71,33 +71,6 @@
  * write range as usual, completing the write cycle.
  */
 
-#if defined(CONFIG_ATARI_ROM_ISA)
-#define rom_in_8(addr) \
-	({ u16 __v = (*(__force volatile u16 *) (addr)); __v >>= 8; __v; })
-#define rom_in_be16(addr) \
-	({ u16 __v = (*(__force volatile u16 *) (addr)); __v; })
-#define rom_in_le16(addr) \
-	({ u16 __v = le16_to_cpu(*(__force volatile u16 *) (addr)); __v; })
-
-#define rom_out_8(addr, b)	\
-	({u8 __w, __v = (b);  u32 _addr = ((u32) (addr)); \
-	__w = ((*(__force volatile u8 *)  ((_addr | 0x10000) + (__v<<1)))); })
-#define rom_out_be16(addr, w)	\
-	({u16 __w, __v = (w); u32 _addr = ((u32) (addr)); \
-	__w = ((*(__force volatile u16 *) ((_addr & 0xFFFF0000UL) + ((__v & 0xFF)<<1)))); \
-	__w = ((*(__force volatile u16 *) ((_addr | 0x10000) + ((__v >> 8)<<1)))); })
-#define rom_out_le16(addr, w)	\
-	({u16 __w, __v = (w); u32 _addr = ((u32) (addr)); \
-	__w = ((*(__force volatile u16 *) ((_addr & 0xFFFF0000UL) + ((__v >> 8)<<1)))); \
-	__w = ((*(__force volatile u16 *) ((_addr | 0x10000) + ((__v & 0xFF)<<1)))); })
-
-#define raw_rom_inb rom_in_8
-#define raw_rom_inw rom_in_be16
-
-#define raw_rom_outb(val, port) rom_out_8((port), (val))
-#define raw_rom_outw(val, port) rom_out_be16((port), (val))
-#endif /* CONFIG_ATARI_ROM_ISA */
-
 static inline void raw_insb(volatile u8 __iomem *port, u8 *buf, unsigned int len)
 {
 	unsigned int i;
@@ -410,62 +383,6 @@ static inline void raw_outsw_swapw(volatile u16 __iomem *port, const u16 *buf,
 		: "g" (port), "g" (buf), "g" (nr)
 		: "d0", "a0", "a1", "d6");
 }
-
-
-#if defined(CONFIG_ATARI_ROM_ISA)
-static inline void raw_rom_insb(volatile u8 __iomem *port, u8 *buf, unsigned int len)
-{
-	unsigned int i;
-
-	for (i = 0; i < len; i++)
-		*buf++ = rom_in_8(port);
-}
-
-static inline void raw_rom_outsb(volatile u8 __iomem *port, const u8 *buf,
-			     unsigned int len)
-{
-	unsigned int i;
-
-	for (i = 0; i < len; i++)
-		rom_out_8(port, *buf++);
-}
-
-static inline void raw_rom_insw(volatile u16 __iomem *port, u16 *buf,
-				   unsigned int nr)
-{
-	unsigned int i;
-
-	for (i = 0; i < nr; i++)
-		*buf++ = rom_in_be16(port);
-}
-
-static inline void raw_rom_outsw(volatile u16 __iomem *port, const u16 *buf,
-				   unsigned int nr)
-{
-	unsigned int i;
-
-	for (i = 0; i < nr; i++)
-		rom_out_be16(port, *buf++);
-}
-
-static inline void raw_rom_insw_swapw(volatile u16 __iomem *port, u16 *buf,
-				   unsigned int nr)
-{
-	unsigned int i;
-
-	for (i = 0; i < nr; i++)
-		*buf++ = rom_in_le16(port);
-}
-
-static inline void raw_rom_outsw_swapw(volatile u16 __iomem *port, const u16 *buf,
-				   unsigned int nr)
-{
-	unsigned int i;
-
-	for (i = 0; i < nr; i++)
-		rom_out_le16(port, *buf++);
-}
-#endif /* CONFIG_ATARI_ROM_ISA */
 
 #endif /* __KERNEL__ */
 

@@ -34,17 +34,6 @@
 #include <asm/irq.h>
 #include <asm/io.h>
 #include <asm/machdep.h>
-#ifdef CONFIG_AMIGA
-#include <asm/amigahw.h>
-#endif
-#ifdef CONFIG_ATARI
-#include <asm/atarihw.h>
-#include <asm/atari_stram.h>
-#endif
-#ifdef CONFIG_SUN3X
-#include <asm/dvma.h>
-#endif
-#include <asm/natfeat.h>
 
 #if !FPSTATESIZE || !NR_IRQS
 #warning No CPU/platform type selected, your kernel will not work!
@@ -58,10 +47,6 @@ EXPORT_SYMBOL(m68k_cputype);
 unsigned long m68k_fputype;
 unsigned long m68k_mmutype;
 EXPORT_SYMBOL(m68k_mmutype);
-#ifdef CONFIG_VME
-unsigned long vme_brdtype;
-EXPORT_SYMBOL(vme_brdtype);
-#endif
 
 int m68k_is040or060;
 EXPORT_SYMBOL(m68k_is040or060);
@@ -98,46 +83,9 @@ void (*mach_reset)( void );
 void (*mach_halt)( void );
 void (*mach_power_off)( void );
 long mach_max_dma_address = 0x00ffffff; /* default set to the lower 16MB */
-#ifdef CONFIG_HEARTBEAT
-void (*mach_heartbeat) (int);
-EXPORT_SYMBOL(mach_heartbeat);
-#endif
-#ifdef CONFIG_M68K_L2_CACHE
-void (*mach_l2_flush) (int);
-#endif
-#if defined(CONFIG_ISA) && defined(MULTI_ISA)
-int isa_type;
-int isa_sex;
-EXPORT_SYMBOL(isa_type);
-EXPORT_SYMBOL(isa_sex);
-#endif
 
-extern int amiga_parse_bootinfo(const struct bi_record *);
-extern int atari_parse_bootinfo(const struct bi_record *);
-extern int mac_parse_bootinfo(const struct bi_record *);
-extern int q40_parse_bootinfo(const struct bi_record *);
-extern int bvme6000_parse_bootinfo(const struct bi_record *);
-extern int mvme16x_parse_bootinfo(const struct bi_record *);
-extern int mvme147_parse_bootinfo(const struct bi_record *);
-extern int hp300_parse_bootinfo(const struct bi_record *);
-extern int apollo_parse_bootinfo(const struct bi_record *);
-extern int sbc030_parse_bootinfo(const struct bi_record *);
-extern int atx030_parse_bootinfo(const struct bi_record *);
 extern int atx040_parse_bootinfo(const struct bi_record *);
 
-extern void config_amiga(void);
-extern void config_atari(void);
-extern void config_mac(void);
-extern void config_sun3(void);
-extern void config_apollo(void);
-extern void config_mvme147(void);
-extern void config_mvme16x(void);
-extern void config_bvme6000(void);
-extern void config_hp300(void);
-extern void config_q40(void);
-extern void config_sun3x(void);
-extern void config_sbc030(void);
-extern void config_atx030(void);
 extern void config_atx040(void);
 
 #define MASK_256K 0xfffc0000
@@ -190,29 +138,7 @@ static void __init m68k_parse_bootinfo(const struct bi_record *record)
 			break;
 
 		default:
-			if (MACH_IS_AMIGA)
-				unknown = amiga_parse_bootinfo(record);
-			else if (MACH_IS_ATARI)
-				unknown = atari_parse_bootinfo(record);
-			else if (MACH_IS_MAC)
-				unknown = mac_parse_bootinfo(record);
-			else if (MACH_IS_Q40)
-				unknown = q40_parse_bootinfo(record);
-			else if (MACH_IS_BVME6000)
-				unknown = bvme6000_parse_bootinfo(record);
-			else if (MACH_IS_MVME16x)
-				unknown = mvme16x_parse_bootinfo(record);
-			else if (MACH_IS_MVME147)
-				unknown = mvme147_parse_bootinfo(record);
-			else if (MACH_IS_HP300)
-				unknown = hp300_parse_bootinfo(record);
-			else if (MACH_IS_APOLLO)
-				unknown = apollo_parse_bootinfo(record);
-			else if (MACH_IS_SBC030)
-				unknown = sbc030_parse_bootinfo(record);
-			else if (MACH_IS_ATX030)
-				unknown = atx030_parse_bootinfo(record);
-			else if (MACH_IS_ATX040)
+			if (MACH_IS_ATX040)
 				unknown = atx040_parse_bootinfo(record);
 			else
 				unknown = 1;
@@ -236,8 +162,7 @@ static void __init m68k_parse_bootinfo(const struct bi_record *record)
 void __init setup_arch(char **cmdline_p)
 {
 	/* The bootinfo is located right after the kernel */
-	if (!CPU_IS_COLDFIRE)
-		m68k_parse_bootinfo((const struct bi_record *)_end);
+	m68k_parse_bootinfo((const struct bi_record *)_end);
 
 	if (CPU_IS_040)
 		m68k_is040or060 = 4;
@@ -289,82 +214,9 @@ void __init setup_arch(char **cmdline_p)
 #endif
 
 	switch (m68k_machtype) {
-#ifdef CONFIG_AMIGA
-	case MACH_AMIGA:
-		config_amiga();
-		break;
-#endif
-#ifdef CONFIG_ATARI
-	case MACH_ATARI:
-		config_atari();
-		break;
-#endif
-#ifdef CONFIG_MAC
-	case MACH_MAC:
-		config_mac();
-		break;
-#endif
-#ifdef CONFIG_SUN3
-	case MACH_SUN3:
-		config_sun3();
-		break;
-#endif
-#ifdef CONFIG_APOLLO
-	case MACH_APOLLO:
-		config_apollo();
-		break;
-#endif
-#ifdef CONFIG_MVME147
-	case MACH_MVME147:
-		config_mvme147();
-		break;
-#endif
-#ifdef CONFIG_MVME16x
-	case MACH_MVME16x:
-		config_mvme16x();
-		break;
-#endif
-#ifdef CONFIG_BVME6000
-	case MACH_BVME6000:
-		config_bvme6000();
-		break;
-#endif
-#ifdef CONFIG_HP300
-	case MACH_HP300:
-		config_hp300();
-		break;
-#endif
-#ifdef CONFIG_Q40
-	case MACH_Q40:
-		config_q40();
-		break;
-#endif
-#ifdef CONFIG_SBC030
-	case MACH_SBC030:
-		config_sbc030();
-		break;
-#endif
-#ifdef CONFIG_ATX030
-	case MACH_ATX030:
-		config_atx030();
-		break;
-#endif
 #ifdef CONFIG_ATX040
 	case MACH_ATX040:
 		config_atx040();
-		break;
-#endif
-#ifdef CONFIG_SUN3X
-	case MACH_SUN3X:
-		config_sun3x();
-		break;
-#endif
-#ifdef CONFIG_COLDFIRE
-	case MACH_M54XX:
-	case MACH_M5441X:
-		cf_bootmem_alloc();
-		cf_mmu_context_init();
-		config_BSP(NULL, 0);
 		break;
 #endif
 	default:
@@ -372,10 +224,6 @@ void __init setup_arch(char **cmdline_p)
 	}
 
 	paging_init();
-
-#ifdef CONFIG_NATFEAT
-	nf_init();
-#endif
 
 #ifndef CONFIG_SUN3
 #ifdef CONFIG_BLK_DEV_INITRD
@@ -387,37 +235,8 @@ void __init setup_arch(char **cmdline_p)
 	}
 #endif
 
-#ifdef CONFIG_ATARI
-	if (MACH_IS_ATARI)
-		atari_stram_reserve_pages((void *)availmem);
-#endif
-#ifdef CONFIG_SUN3X
-	if (MACH_IS_SUN3X) {
-		dvma_init();
-	}
-#endif
-
 #endif /* !CONFIG_SUN3 */
 
-/* set ISA defs early as possible */
-#if defined(CONFIG_ISA) && defined(MULTI_ISA)
-	if (MACH_IS_Q40) {
-		isa_type = ISA_TYPE_Q40;
-		isa_sex = 0;
-	}
-#ifdef CONFIG_AMIGA_PCMCIA
-	if (MACH_IS_AMIGA && AMIGAHW_PRESENT(PCMCIA)) {
-		isa_type = ISA_TYPE_AG;
-		isa_sex = 1;
-	}
-#endif
-#ifdef CONFIG_ATARI_ROM_ISA
-	if (MACH_IS_ATARI) {
-		isa_type = ISA_TYPE_ENEC;
-		isa_sex = 0;
-	}
-#endif
-#endif
 }
 
 static int show_cpuinfo(struct seq_file *m, void *v)
@@ -429,7 +248,6 @@ static int show_cpuinfo(struct seq_file *m, void *v)
 #define LOOP_CYCLES_68030	(8)
 #define LOOP_CYCLES_68040	(3)
 #define LOOP_CYCLES_68060	(1)
-#define LOOP_CYCLES_COLDFIRE	(2)
 
 	if (CPU_IS_020) {
 		cpu = "68020";
@@ -443,9 +261,6 @@ static int show_cpuinfo(struct seq_file *m, void *v)
 	} else if (CPU_IS_060) {
 		cpu = "68060";
 		clockfactor = LOOP_CYCLES_68060;
-	} else if (CPU_IS_COLDFIRE) {
-		cpu = "ColdFire";
-		clockfactor = LOOP_CYCLES_COLDFIRE;
 	} else {
 		cpu = "680x0";
 		clockfactor = 0;
@@ -462,10 +277,6 @@ static int show_cpuinfo(struct seq_file *m, void *v)
 		fpu = "68040";
 	else if (m68k_fputype & FPU_68060)
 		fpu = "68060";
-	else if (m68k_fputype & FPU_SUNFPA)
-		fpu = "Sun FPA";
-	else if (m68k_fputype & FPU_COLDFIRE)
-		fpu = "ColdFire";
 	else
 		fpu = "none";
 #endif
@@ -478,12 +289,6 @@ static int show_cpuinfo(struct seq_file *m, void *v)
 		mmu = "68040";
 	else if (m68k_mmutype & MMU_68060)
 		mmu = "68060";
-	else if (m68k_mmutype & MMU_SUN3)
-		mmu = "Sun-3";
-	else if (m68k_mmutype & MMU_APOLLO)
-		mmu = "Apollo";
-	else if (m68k_mmutype & MMU_COLDFIRE)
-		mmu = "ColdFire";
 	else
 		mmu = "unknown";
 
@@ -521,37 +326,6 @@ const struct seq_operations cpuinfo_op = {
 	.show	= show_cpuinfo,
 };
 
-#ifdef CONFIG_PROC_HARDWARE
-static int hardware_proc_show(struct seq_file *m, void *v)
-{
-	char model[80];
-	unsigned long mem;
-	int i;
-
-	if (mach_get_model)
-		mach_get_model(model);
-	else
-		strcpy(model, "Unknown m68k");
-
-	seq_printf(m, "Model:\t\t%s\n", model);
-	for (mem = 0, i = 0; i < m68k_num_memory; i++)
-		mem += m68k_memory[i].size;
-	seq_printf(m, "System Memory:\t%ldK\n", mem >> 10);
-
-	if (mach_get_hardware_list)
-		mach_get_hardware_list(m);
-
-	return 0;
-}
-
-static int __init proc_hardware_init(void)
-{
-	proc_create_single("hardware", 0, NULL, hardware_proc_show);
-	return 0;
-}
-module_init(proc_hardware_init);
-#endif
-
 void check_bugs(void)
 {
 #if defined(CONFIG_FPU) && !defined(CONFIG_M68KFPU_EMU)
@@ -564,13 +338,3 @@ void check_bugs(void)
 	}
 #endif /* !CONFIG_M68KFPU_EMU */
 }
-
-#ifdef CONFIG_ADB
-static int __init adb_probe_sync_enable (char *str) {
-	extern int __adb_probe_sync;
-	__adb_probe_sync = 1;
-	return 1;
-}
-
-__setup("adb_sync", adb_probe_sync_enable);
-#endif /* CONFIG_ADB */

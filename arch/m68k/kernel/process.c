@@ -43,12 +43,7 @@ asmlinkage void ret_from_kernel_thread(void);
 
 void arch_cpu_idle(void)
 {
-#if defined(MACH_ATARI_ONLY)
-	/* block out HSYNC on the atari (falcon) */
-	__asm__("stop #0x2200" : : : "cc");
-#else
 	__asm__("stop #0x2000" : : : "cc");
-#endif
 }
 
 void machine_restart(char * __unused)
@@ -93,12 +88,8 @@ void show_regs(struct pt_regs * regs)
 void flush_thread(void)
 {
 	current->thread.fs = __USER_DS;
-#ifdef CONFIG_FPU
-	if (!FPU_IS_EMU) {
-		unsigned long zero = 0;
-		asm volatile("frestore %0": :"m" (zero));
-	}
-#endif
+	unsigned long zero = 0;
+	asm volatile("frestore %0": :"m" (zero));
 }
 
 /*
@@ -157,37 +148,20 @@ int copy_thread(unsigned long clone_flags, unsigned long usp,
 	if (clone_flags & CLONE_SETTLS)
 		task_thread_info(p)->tp_value = frame->regs.d5;
 
-#ifdef CONFIG_FPU
-	if (!FPU_IS_EMU) {
-		/* Copy the current fpu state */
-		asm volatile ("fsave %0" : : "m" (p->thread.fpstate[0]) : "memory");
+	/* Copy the current fpu state */
+	asm volatile ("fsave %0" : : "m" (p->thread.fpstate[0]) : "memory");
 
-		if (!CPU_IS_060 ? p->thread.fpstate[0] : p->thread.fpstate[2]) {
-			if (CPU_IS_COLDFIRE) {
-				asm volatile ("fmovemd %/fp0-%/fp7,%0\n\t"
-					      "fmovel %/fpiar,%1\n\t"
-					      "fmovel %/fpcr,%2\n\t"
-					      "fmovel %/fpsr,%3"
-					      :
-					      : "m" (p->thread.fp[0]),
-						"m" (p->thread.fpcntl[0]),
-						"m" (p->thread.fpcntl[1]),
-						"m" (p->thread.fpcntl[2])
-					      : "memory");
-			} else {
-				asm volatile ("fmovemx %/fp0-%/fp7,%0\n\t"
-					      "fmoveml %/fpiar/%/fpcr/%/fpsr,%1"
-					      :
-					      : "m" (p->thread.fp[0]),
-						"m" (p->thread.fpcntl[0])
-					      : "memory");
-			}
-		}
-
-		/* Restore the state in case the fpu was busy */
-		asm volatile ("frestore %0" : : "m" (p->thread.fpstate[0]));
+	if (!CPU_IS_060 ? p->thread.fpstate[0] : p->thread.fpstate[2]) {
+		asm volatile ("fmovemx %/fp0-%/fp7,%0\n\t"
+			      "fmoveml %/fpiar/%/fpcr/%/fpsr,%1"
+			      :
+			      : "m" (p->thread.fp[0]),
+				"m" (p->thread.fpcntl[0])
+			      : "memory");
 	}
-#endif /* CONFIG_FPU */
+
+	/* Restore the state in case the fpu was busy */
+	asm volatile ("frestore %0" : : "m" (p->thread.fpstate[0]));
 
 	return 0;
 }
@@ -195,50 +169,21 @@ int copy_thread(unsigned long clone_flags, unsigned long usp,
 /* Fill in the fpu structure for a core dump.  */
 int dump_fpu (struct pt_regs *regs, struct user_m68kfp_struct *fpu)
 {
-	if (FPU_IS_EMU) {
-		int i;
+	char fpustate[216];
 
-		memcpy(fpu->fpcntl, current->thread.fpcntl, 12);
-		memcpy(fpu->fpregs, current->thread.fp, 96);
-		/* Convert internal fpu reg representation
-		 * into long double format
-		 */
-		for (i = 0; i < 24; i += 3)
-			fpu->fpregs[i] = ((fpu->fpregs[i] & 0xffff0000) << 15) |
-			                 ((fpu->fpregs[i] & 0x0000ffff) << 16);
-		return 1;
-	}
+	/* First dump the fpu context to avoid protocol violation.  */
+	asm volatile ("fsave %0" :: "m" (fpustate[0]) : "memory");
+	if (!CPU_IS_060 ? !fpustate[0] : !fpustate[2])
+		return 0;
 
-	if (IS_ENABLED(CONFIG_FPU)) {
-		char fpustate[216];
-
-		/* First dump the fpu context to avoid protocol violation.  */
-		asm volatile ("fsave %0" :: "m" (fpustate[0]) : "memory");
-		if (!CPU_IS_060 ? !fpustate[0] : !fpustate[2])
-			return 0;
-
-		if (CPU_IS_COLDFIRE) {
-			asm volatile ("fmovel %/fpiar,%0\n\t"
-				      "fmovel %/fpcr,%1\n\t"
-				      "fmovel %/fpsr,%2\n\t"
-				      "fmovemd %/fp0-%/fp7,%3"
-				      :
-				      : "m" (fpu->fpcntl[0]),
-					"m" (fpu->fpcntl[1]),
-					"m" (fpu->fpcntl[2]),
-					"m" (fpu->fpregs[0])
-				      : "memory");
-		} else {
-			asm volatile ("fmovem %/fpiar/%/fpcr/%/fpsr,%0"
-				      :
-				      : "m" (fpu->fpcntl[0])
-				      : "memory");
-			asm volatile ("fmovemx %/fp0-%/fp7,%0"
-				      :
-				      : "m" (fpu->fpregs[0])
-				      : "memory");
-		}
-	}
+	asm volatile ("fmovem %/fpiar/%/fpcr/%/fpsr,%0"
+		      :
+		      : "m" (fpu->fpcntl[0])
+		      : "memory");
+	asm volatile ("fmovemx %/fp0-%/fp7,%0"
+		      :
+		      : "m" (fpu->fpregs[0])
+		      : "memory");
 
 	return 1;
 }

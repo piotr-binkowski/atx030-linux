@@ -27,9 +27,6 @@
 #include <asm/traps.h>
 #include <asm/machdep.h>
 #include <asm/io.h>
-#ifdef CONFIG_ATARI
-#include <asm/atari_stram.h>
-#endif
 #include <asm/sections.h>
 #include <asm/tlb.h>
 
@@ -40,10 +37,8 @@
 void *empty_zero_page;
 EXPORT_SYMBOL(empty_zero_page);
 
-#if !defined(CONFIG_SUN3) && !defined(CONFIG_COLDFIRE)
 extern void init_pointer_table(unsigned long ptable);
 extern pmd_t *zero_pgtable;
-#endif
 
 #ifdef CONFIG_MMU
 
@@ -108,12 +103,10 @@ void __init paging_init(void)
 
 void free_initmem(void)
 {
-#ifndef CONFIG_MMU_SUN3
 	free_initmem_default(-1);
-#endif /* CONFIG_MMU_SUN3 */
 }
 
-#if defined(CONFIG_MMU) && !defined(CONFIG_COLDFIRE)
+#if defined(CONFIG_MMU)
 #define VECTORS	&vectors[0]
 #else
 #define VECTORS	_ramvec
@@ -121,7 +114,6 @@ void free_initmem(void)
 
 static inline void init_pointer_tables(void)
 {
-#if defined(CONFIG_MMU) && !defined(CONFIG_SUN3) && !defined(CONFIG_COLDFIRE)
 	int i;
 
 	/* insert pointer tables allocated so far into the tablelist */
@@ -134,7 +126,6 @@ static inline void init_pointer_tables(void)
 	/* insert also pointer table that we used to unmap the zero page */
 	if (zero_pgtable)
 		init_pointer_table((unsigned long)zero_pgtable);
-#endif
 }
 
 void __init mem_init(void)

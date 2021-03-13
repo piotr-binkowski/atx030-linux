@@ -121,38 +121,6 @@ ENTRY(ret_from_kernel_thread)
 	addql	#4,%sp
 	jra	ret_from_exception
 
-#if defined(CONFIG_COLDFIRE) || !defined(CONFIG_MMU)
-
-#ifdef TRAP_DBG_INTERRUPT
-
-.globl dbginterrupt
-ENTRY(dbginterrupt)
-	SAVE_ALL_INT
-	GET_CURRENT(%d0)
-	movel	%sp,%sp@- 		/* stack frame pointer argument */
-	jsr	dbginterrupt_c
-	addql	#4,%sp
-	jra	ret_from_exception
-#endif
-
-ENTRY(reschedule)
-	/* save top of frame */
-	pea	%sp@
-	jbsr	set_esp0
-	addql	#4,%sp
-	pea	ret_from_exception
-	jmp	schedule
-
-ENTRY(ret_from_user_signal)
-	moveq #__NR_sigreturn,%d0
-	trap #0
-
-ENTRY(ret_from_user_rt_signal)
-	movel #__NR_rt_sigreturn,%d0
-	trap #0
-
-#else
-
 do_trace_entry:
 	movel	#-ENOSYS,%sp@(PT_OFF_D0)| needed for strace
 	subql	#4,%sp
@@ -345,11 +313,6 @@ resume:
 	movel	%sp,%a0@(TASK_THREAD+THREAD_KSP)
 
 	/* save floating point context */
-#ifndef CONFIG_M68KFPU_EMU_ONLY
-#ifdef CONFIG_M68KFPU_EMU
-	tstl	m68k_fputype
-	jeq	3f
-#endif
 	fsave	%a0@(TASK_THREAD+THREAD_FPSTATE)
 
 #if defined(CONFIG_M68060)
@@ -371,7 +334,6 @@ resume:
 2:	fmovemx	%fp0-%fp7,%a0@(TASK_THREAD+THREAD_FPREG)
 	fmoveml	%fpcr/%fpsr/%fpiar,%a0@(TASK_THREAD+THREAD_FPCNTL)
 3:
-#endif	/* CONFIG_M68KFPU_EMU_ONLY */
 	/* Return previous task in %d1 */
 	movel	%curptr,%d1
 
@@ -379,11 +341,6 @@ resume:
 	movel	%a1,%curptr
 
 	/* restore floating point context */
-#ifndef CONFIG_M68KFPU_EMU_ONLY
-#ifdef CONFIG_M68KFPU_EMU
-	tstl	m68k_fputype
-	jeq	4f
-#endif
 #if defined(CONFIG_M68060)
 #if !defined(CPU_M68060_ONLY)
 	btst	#3,m68k_cputype+3
@@ -404,7 +361,6 @@ resume:
 	fmoveml	%a1@(TASK_THREAD+THREAD_FPCNTL),%fpcr/%fpsr/%fpiar
 3:	frestore %a1@(TASK_THREAD+THREAD_FPSTATE)
 4:
-#endif	/* CONFIG_M68KFPU_EMU_ONLY */
 
 	/* restore the kernel stack pointer */
 	movel	%a1@(TASK_THREAD+THREAD_KSP),%sp
@@ -425,5 +381,3 @@ resume:
 	movew	%a1@(TASK_THREAD+THREAD_SR),%sr
 
 	rts
-
-#endif /* CONFIG_MMU && !CONFIG_COLDFIRE */

@@ -152,10 +152,6 @@ void m68k_irq_shutdown(struct irq_data *data)
 
 unsigned int irq_canonicalize(unsigned int irq)
 {
-#ifdef CONFIG_Q40
-	if (MACH_IS_Q40 && irq == 11)
-		irq = 10;
-#endif
 	return irq;
 }
 

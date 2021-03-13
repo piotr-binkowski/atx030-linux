@@ -17,7 +17,6 @@
 #include <linux/kbuild.h>
 #include <asm/bootinfo.h>
 #include <asm/irq.h>
-#include <asm/amigahw.h>
 #include <linux/font.h>
 
 int main(void)
@@ -77,31 +76,6 @@ int main(void)
 	DEFINE(BIR_TAG, offsetof(struct bi_record, tag));
 	DEFINE(BIR_SIZE, offsetof(struct bi_record, size));
 	DEFINE(BIR_DATA, offsetof(struct bi_record, data));
-
-	/* offsets into the font_desc struct */
-	DEFINE(FONT_DESC_IDX, offsetof(struct font_desc, idx));
-	DEFINE(FONT_DESC_NAME, offsetof(struct font_desc, name));
-	DEFINE(FONT_DESC_WIDTH, offsetof(struct font_desc, width));
-	DEFINE(FONT_DESC_HEIGHT, offsetof(struct font_desc, height));
-	DEFINE(FONT_DESC_DATA, offsetof(struct font_desc, data));
-	DEFINE(FONT_DESC_PREF, offsetof(struct font_desc, pref));
-
-	/* offsets into the custom struct */
-	DEFINE(CUSTOMBASE, &amiga_custom);
-	DEFINE(C_INTENAR, offsetof(struct CUSTOM, intenar));
-	DEFINE(C_INTREQR, offsetof(struct CUSTOM, intreqr));
-	DEFINE(C_INTENA, offsetof(struct CUSTOM, intena));
-	DEFINE(C_INTREQ, offsetof(struct CUSTOM, intreq));
-	DEFINE(C_SERDATR, offsetof(struct CUSTOM, serdatr));
-	DEFINE(C_SERDAT, offsetof(struct CUSTOM, serdat));
-	DEFINE(C_SERPER, offsetof(struct CUSTOM, serper));
-	DEFINE(CIAABASE, &ciaa);
-	DEFINE(CIABBASE, &ciab);
-	DEFINE(C_PRA, offsetof(struct CIA, pra));
-	DEFINE(ZTWOBASE, zTwoBase);
-
-	/* enum m68k_fixup_type */
-	DEFINE(M68K_FIXUP_MEMOFFSET, m68k_fixup_memoffset);
 #endif
 
 	return 0;

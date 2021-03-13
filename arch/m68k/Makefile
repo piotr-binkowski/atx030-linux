@@ -26,8 +26,7 @@ endif
 KBUILD_AFLAGS += -m68040
 KBUILD_CFLAGS += -m68040 -pipe
 
-# without -fno-strength-reduce the 53c7xx.c driver fails ;-(
-# KBUILD_CFLAGS += -fno-strength-reduce -ffixed-a2
+KBUILD_CFLAGS += -ffixed-a2
 
 KBUILD_LDFLAGS := -m m68kelf
 KBUILD_LDFLAGS_MODULE += -T $(srctree)/arch/m68k/kernel/module.lds

@@ -111,11 +111,7 @@ static const char *space_names[] = {
 	[0]		= "Space 0",
 	[USER_DATA]	= "User Data",
 	[USER_PROGRAM]	= "User Program",
-#ifndef CONFIG_SUN3
-	[3]		= "Space 3",
-#else
-	[FC_CONTROL]	= "Control",
-#endif
+	[3]             = "Space 3",
 	[4]		= "Space 4",
 	[SUPER_DATA]	= "Super Data",
 	[SUPER_PROGRAM]	= "Super Program",
@@ -366,137 +362,6 @@ disable_wb:
 }
 #endif /* CONFIG_M68040 */
 
-#if defined(CONFIG_SUN3)
-#include <asm/sun3mmu.h>
-
-extern int mmu_emu_handle_fault (unsigned long, int, int);
-
-/* sun3 version of bus_error030 */
-
-static inline void bus_error030 (struct frame *fp)
-{
-	unsigned char buserr_type = sun3_get_buserr ();
-	unsigned long addr, errorcode;
-	unsigned short ssw = fp->un.fmtb.ssw;
-	extern unsigned long _sun3_map_test_start, _sun3_map_test_end;
-
-	if (ssw & (FC | FB))
-		pr_debug("Instruction fault at %#010lx\n",
-			ssw & FC ?
-			fp->ptregs.format == 0xa ? fp->ptregs.pc + 2 : fp->un.fmtb.baddr - 2
-			:
-			fp->ptregs.format == 0xa ? fp->ptregs.pc + 4 : fp->un.fmtb.baddr);
-	if (ssw & DF)
-		pr_debug("Data %s fault at %#010lx in %s (pc=%#lx)\n",
-			ssw & RW ? "read" : "write",
-			fp->un.fmtb.daddr,
-			space_names[ssw & DFC], fp->ptregs.pc);
-
-	/*
-	 * Check if this page should be demand-mapped. This needs to go before
-	 * the testing for a bad kernel-space access (demand-mapping applies
-	 * to kernel accesses too).
-	 */
-
-	if ((ssw & DF)
-	    && (buserr_type & (SUN3_BUSERR_PROTERR | SUN3_BUSERR_INVALID))) {
-		if (mmu_emu_handle_fault (fp->un.fmtb.daddr, ssw & RW, 0))
-			return;
-	}
-
-	/* Check for kernel-space pagefault (BAD). */
-	if (fp->ptregs.sr & PS_S) {
-		/* kernel fault must be a data fault to user space */
-		if (! ((ssw & DF) && ((ssw & DFC) == USER_DATA))) {
-		     // try checking the kernel mappings before surrender
-		     if (mmu_emu_handle_fault (fp->un.fmtb.daddr, ssw & RW, 1))
-			  return;
-			/* instruction fault or kernel data fault! */
-			if (ssw & (FC | FB))
-				pr_err("Instruction fault at %#010lx\n",
-					fp->ptregs.pc);
-			if (ssw & DF) {
-				/* was this fault incurred testing bus mappings? */
-				if((fp->ptregs.pc >= (unsigned long)&_sun3_map_test_start) &&
-				   (fp->ptregs.pc <= (unsigned long)&_sun3_map_test_end)) {
-					send_fault_sig(&fp->ptregs);
-					return;
-				}
-
-				pr_err("Data %s fault at %#010lx in %s (pc=%#lx)\n",
-					ssw & RW ? "read" : "write",
-					fp->un.fmtb.daddr,
-					space_names[ssw & DFC], fp->ptregs.pc);
-			}
-			pr_err("BAD KERNEL BUSERR\n");
-
-			die_if_kernel("Oops", &fp->ptregs,0);
-			force_sig(SIGKILL, current);
-			return;
-		}
-	} else {
-		/* user fault */
-		if (!(ssw & (FC | FB)) && !(ssw & DF))
-			/* not an instruction fault or data fault! BAD */
-			panic ("USER BUSERR w/o instruction or data fault");
-	}
-
-
-	/* First handle the data fault, if any.  */
-	if (ssw & DF) {
-		addr = fp->un.fmtb.daddr;
-
-// errorcode bit 0:	0 -> no page		1 -> protection fault
-// errorcode bit 1:	0 -> read fault		1 -> write fault
-
-// (buserr_type & SUN3_BUSERR_PROTERR)	-> protection fault
-// (buserr_type & SUN3_BUSERR_INVALID)	-> invalid page fault
-
-		if (buserr_type & SUN3_BUSERR_PROTERR)
-			errorcode = 0x01;
-		else if (buserr_type & SUN3_BUSERR_INVALID)
-			errorcode = 0x00;
-		else {
-			pr_debug("*** unexpected busfault type=%#04x\n",
-				 buserr_type);
-			pr_debug("invalid %s access at %#lx from pc %#lx\n",
-				 !(ssw & RW) ? "write" : "read", addr,
-				 fp->ptregs.pc);
-			die_if_kernel ("Oops", &fp->ptregs, buserr_type);
-			force_sig (SIGBUS, current);
-			return;
-		}
-
-//todo: wtf is RM bit? --m
-		if (!(ssw & RW) || ssw & RM)
-			errorcode |= 0x02;
-
-		/* Handle page fault. */
-		do_page_fault (&fp->ptregs, addr, errorcode);
-
-		/* Retry the data fault now. */
-		return;
-	}
-
-	/* Now handle the instruction fault. */
-
-	/* Get the fault address. */
-	if (fp->ptregs.format == 0xA)
-		addr = fp->ptregs.pc + 4;
-	else
-		addr = fp->un.fmtb.baddr;
-	if (ssw & FC)
-		addr -= 2;
-
-	if (buserr_type & SUN3_BUSERR_INVALID) {
-		if (!mmu_emu_handle_fault(addr, 1, 0))
-			do_page_fault (&fp->ptregs, addr, 0);
-       } else {
-		pr_debug("protection fault on insn access (segv).\n");
-		force_sig (SIGSEGV, current);
-       }
-}
-#else
 #if defined(CPU_M68020_OR_M68030)
 static inline void bus_error030 (struct frame *fp)
 {
@@ -670,89 +535,6 @@ create_atc_entry:
 		      : "a" (addr));
 }
 #endif /* CPU_M68020_OR_M68030 */
-#endif /* !CONFIG_SUN3 */
-
-#if defined(CONFIG_COLDFIRE) && defined(CONFIG_MMU)
-#include <asm/mcfmmu.h>
-
-/*
- *	The following table converts the FS encoding of a ColdFire
- *	exception stack frame into the error_code value needed by
- *	do_fault.
-*/
-static const unsigned char fs_err_code[] = {
-	0,  /* 0000 */
-	0,  /* 0001 */
-	0,  /* 0010 */
-	0,  /* 0011 */
-	1,  /* 0100 */
-	0,  /* 0101 */
-	0,  /* 0110 */
-	0,  /* 0111 */
-	2,  /* 1000 */
-	3,  /* 1001 */
-	2,  /* 1010 */
-	0,  /* 1011 */
-	1,  /* 1100 */
-	1,  /* 1101 */
-	0,  /* 1110 */
-	0   /* 1111 */
-};
-
-static inline void access_errorcf(unsigned int fs, struct frame *fp)
-{
-	unsigned long mmusr, addr;
-	unsigned int err_code;
-	int need_page_fault;
-
-	mmusr = mmu_read(MMUSR);
-	addr = mmu_read(MMUAR);
-
-	/*
-	 * error_code:
-	 *	bit 0 == 0 means no page found, 1 means protection fault
-	 *	bit 1 == 0 means read, 1 means write
-	 */
-	switch (fs) {
-	case  5:  /* 0101 TLB opword X miss */
-		need_page_fault = cf_tlb_miss(&fp->ptregs, 0, 0, 0);
-		addr = fp->ptregs.pc;
-		break;
-	case  6:  /* 0110 TLB extension word X miss */
-		need_page_fault = cf_tlb_miss(&fp->ptregs, 0, 0, 1);
-		addr = fp->ptregs.pc + sizeof(long);
-		break;
-	case 10:  /* 1010 TLB W miss */
-		need_page_fault = cf_tlb_miss(&fp->ptregs, 1, 1, 0);
-		break;
-	case 14: /* 1110 TLB R miss */
-		need_page_fault = cf_tlb_miss(&fp->ptregs, 0, 1, 0);
-		break;
-	default:
-		/* 0000 Normal  */
-		/* 0001 Reserved */
-		/* 0010 Interrupt during debug service routine */
-		/* 0011 Reserved */
-		/* 0100 X Protection */
-		/* 0111 IFP in emulator mode */
-		/* 1000 W Protection*/
-		/* 1001 Write error*/
-		/* 1011 Reserved*/
-		/* 1100 R Protection*/
-		/* 1101 R Protection*/
-		/* 1111 OEP in emulator mode*/
-		need_page_fault = 1;
-		break;
-	}
-
-	if (need_page_fault) {
-		err_code = fs_err_code[fs];
-		if ((fs == 13) && (mmusr & MMUSR_WF)) /* rd-mod-wr access */
-			err_code |= 2; /* bit1 - write, bit0 - protection */
-		do_page_fault(&fp->ptregs, addr, err_code);
-	}
-}
-#endif /* CONFIG_COLDFIRE CONFIG_MMU */
 
 asmlinkage void buserr_c(struct frame *fp)
 {
@@ -761,28 +543,6 @@ asmlinkage void buserr_c(struct frame *fp)
 		current->thread.esp0 = (unsigned long) fp;
 
 	pr_debug("*** Bus Error *** Format is %x\n", fp->ptregs.format);
-
-#if defined(CONFIG_COLDFIRE) && defined(CONFIG_MMU)
-	if (CPU_IS_COLDFIRE) {
-		unsigned int fs;
-		fs = (fp->ptregs.vector & 0x3) |
-			((fp->ptregs.vector & 0xc00) >> 8);
-		switch (fs) {
-		case 0x5:
-		case 0x6:
-		case 0x7:
-		case 0x9:
-		case 0xa:
-		case 0xd:
-		case 0xe:
-		case 0xf:
-			access_errorcf(fs, fp);
-			return;
-		default:
-			break;
-		}
-	}
-#endif /* CONFIG_COLDFIRE && CONFIG_MMU */
 
 	switch (fp->ptregs.format) {
 #if defined (CONFIG_M68060)
@@ -1155,10 +915,3 @@ asmlinkage void fpsp040_die(void)
 {
 	do_exit(SIGSEGV);
 }
-
-#ifdef CONFIG_M68KFPU_EMU
-asmlinkage void fpemu_signal(int signal, int code, void *addr)
-{
-	force_sig_fault(signal, code, addr, current);
-}
-#endif

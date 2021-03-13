@@ -52,18 +52,11 @@
 #include <asm/ucontext.h>
 #include <asm/cacheflush.h>
 
-#ifdef CONFIG_MMU
-
 /*
  * Handle the slight differences in classic 68k and ColdFire trap frames.
  */
-#ifdef CONFIG_COLDFIRE
-#define	FORMAT		4
-#define	FMT4SIZE	0
-#else
 #define	FORMAT		0
 #define	FMT4SIZE	sizeof(((struct frame *)0)->un.fmt4)
-#endif
 
 static const int frame_size_change[16] = {
   [1]	= -1, /* sizeof(((struct frame *)0)->un.fmt1), */
@@ -151,7 +144,7 @@ static inline void push_cache (unsigned long vaddr)
 				      "cpushl %%bc,(%0)\n\t"
 				      ".chip 68k"
 				      : : "a" (temp));
-	} else if (!CPU_IS_COLDFIRE) {
+	} else {
 		/*
 		 * 68030/68020 have no writeback cache;
 		 * still need to clear icache.
@@ -166,54 +159,8 @@ static inline void push_cache (unsigned long vaddr)
 		asm volatile ("movec %0,%%caar\n\t"
 			      "movec %1,%%cacr"
 			      : : "r" (vaddr + 4), "r" (temp));
-	} else {
-		/* CPU_IS_COLDFIRE */
-#if defined(CONFIG_CACHE_COPYBACK)
-		flush_cf_dcache(0, DCACHE_MAX_ADDR);
-#endif
-		/* Invalidate instruction cache for the pushed bytes */
-		clear_cf_icache(vaddr, vaddr + 8);
 	}
 }
-
-static inline void adjustformat(struct pt_regs *regs)
-{
-}
-
-static inline void save_a5_state(struct sigcontext *sc, struct pt_regs *regs)
-{
-}
-
-#else /* CONFIG_MMU */
-
-void ret_from_user_signal(void);
-void ret_from_user_rt_signal(void);
-
-static inline int frame_extra_sizes(int f)
-{
-	/* No frame size adjustments required on non-MMU CPUs */
-	return 0;
-}
-
-static inline void adjustformat(struct pt_regs *regs)
-{
-	/*
-	 * set format byte to make stack appear modulo 4, which it will
-	 * be when doing the rte
-	 */
-	regs->format = 0x4;
-}
-
-static inline void save_a5_state(struct sigcontext *sc, struct pt_regs *regs)
-{
-	sc->sc_a5 = ((struct switch_stack *)regs - 1)->a5;
-}
-
-static inline void push_cache(unsigned long vaddr)
-{
-}
-
-#endif /* CONFIG_MMU */
 
 /*
  * Do a signal return; undo the signal stack.
@@ -249,24 +196,15 @@ struct rt_sigframe
 #define uc_formatvec	uc_filler[FPCONTEXT_SIZE/4]
 #define uc_extra	uc_filler[FPCONTEXT_SIZE/4+1]
 
-#ifdef CONFIG_FPU
-
 static unsigned char fpu_version;	/* version number of fpu, set by setup_frame */
 
 static inline int restore_fpu_state(struct sigcontext *sc)
 {
 	int err = 1;
 
-	if (FPU_IS_EMU) {
-	    /* restore registers */
-	    memcpy(current->thread.fpcntl, sc->sc_fpcntl, 12);
-	    memcpy(current->thread.fp, sc->sc_fpregs, 24);
-	    return 0;
-	}
-
 	if (CPU_IS_060 ? sc->sc_fpstate[2] : sc->sc_fpstate[0]) {
 	    /* Verify the frame format.  */
-	    if (!(CPU_IS_060 || CPU_IS_COLDFIRE) &&
+	    if (!(CPU_IS_060) &&
 		 (sc->sc_fpstate[0] != fpu_version))
 		goto out;
 	    if (CPU_IS_020_OR_030) {
@@ -286,43 +224,22 @@ static inline int restore_fpu_state(struct sigcontext *sc)
                       sc->sc_fpstate[3] == 0x60 ||
 		      sc->sc_fpstate[3] == 0xe0))
 		    goto out;
-	    } else if (CPU_IS_COLDFIRE) {
-		if (!(sc->sc_fpstate[0] == 0x00 ||
-		      sc->sc_fpstate[0] == 0x05 ||
-		      sc->sc_fpstate[0] == 0xe5))
-		    goto out;
 	    } else
 		goto out;
 
-	    if (CPU_IS_COLDFIRE) {
-		__asm__ volatile ("fmovemd %0,%%fp0-%%fp1\n\t"
-				  "fmovel %1,%%fpcr\n\t"
-				  "fmovel %2,%%fpsr\n\t"
-				  "fmovel %3,%%fpiar"
-				  : /* no outputs */
-				  : "m" (sc->sc_fpregs[0]),
-				    "m" (sc->sc_fpcntl[0]),
-				    "m" (sc->sc_fpcntl[1]),
-				    "m" (sc->sc_fpcntl[2]));
-	    } else {
-		__asm__ volatile (".chip 68k/68881\n\t"
-				  "fmovemx %0,%%fp0-%%fp1\n\t"
-				  "fmoveml %1,%%fpcr/%%fpsr/%%fpiar\n\t"
-				  ".chip 68k"
-				  : /* no outputs */
-				  : "m" (*sc->sc_fpregs),
-				    "m" (*sc->sc_fpcntl));
-	    }
+	__asm__ volatile (".chip 68k/68881\n\t"
+			  "fmovemx %0,%%fp0-%%fp1\n\t"
+			  "fmoveml %1,%%fpcr/%%fpsr/%%fpiar\n\t"
+			  ".chip 68k"
+			  : /* no outputs */
+			  : "m" (*sc->sc_fpregs),
+			    "m" (*sc->sc_fpcntl));
 	}
 
-	if (CPU_IS_COLDFIRE) {
-		__asm__ volatile ("frestore %0" : : "m" (*sc->sc_fpstate));
-	} else {
-		__asm__ volatile (".chip 68k/68881\n\t"
-				  "frestore %0\n\t"
-				  ".chip 68k"
-				  : : "m" (*sc->sc_fpstate));
-	}
+	__asm__ volatile (".chip 68k/68881\n\t"
+			  "frestore %0\n\t"
+			  ".chip 68k"
+			  : : "m" (*sc->sc_fpstate));
 	err = 0;
 
 out:
@@ -332,7 +249,7 @@ out:
 static inline int rt_restore_fpu_state(struct ucontext __user *uc)
 {
 	unsigned char fpstate[FPCONTEXT_SIZE];
-	int context_size = CPU_IS_060 ? 8 : (CPU_IS_COLDFIRE ? 12 : 0);
+	int context_size = CPU_IS_060 ? 8 : 0;
 	fpregset_t fpregs;
 	int err = 1;
 
@@ -351,10 +268,10 @@ static inline int rt_restore_fpu_state(struct ucontext __user *uc)
 	if (__get_user(*(long *)fpstate, (long __user *)&uc->uc_fpstate))
 		goto out;
 	if (CPU_IS_060 ? fpstate[2] : fpstate[0]) {
-		if (!(CPU_IS_060 || CPU_IS_COLDFIRE))
+		if (!(CPU_IS_060))
 			context_size = fpstate[1];
 		/* Verify the frame format.  */
-		if (!(CPU_IS_060 || CPU_IS_COLDFIRE) &&
+		if (!(CPU_IS_060) &&
 		     (fpstate[0] != fpu_version))
 			goto out;
 		if (CPU_IS_020_OR_030) {
@@ -374,50 +291,29 @@ static inline int rt_restore_fpu_state(struct ucontext __user *uc)
 			      fpstate[3] == 0x60 ||
 			      fpstate[3] == 0xe0))
 				goto out;
-		} else if (CPU_IS_COLDFIRE) {
-			if (!(fpstate[3] == 0x00 ||
-			      fpstate[3] == 0x05 ||
-			      fpstate[3] == 0xe5))
-				goto out;
 		} else
 			goto out;
 		if (__copy_from_user(&fpregs, &uc->uc_mcontext.fpregs,
 				     sizeof(fpregs)))
 			goto out;
 
-		if (CPU_IS_COLDFIRE) {
-			__asm__ volatile ("fmovemd %0,%%fp0-%%fp7\n\t"
-					  "fmovel %1,%%fpcr\n\t"
-					  "fmovel %2,%%fpsr\n\t"
-					  "fmovel %3,%%fpiar"
-					  : /* no outputs */
-					  : "m" (fpregs.f_fpregs[0]),
-					    "m" (fpregs.f_fpcntl[0]),
-					    "m" (fpregs.f_fpcntl[1]),
-					    "m" (fpregs.f_fpcntl[2]));
-		} else {
-			__asm__ volatile (".chip 68k/68881\n\t"
-					  "fmovemx %0,%%fp0-%%fp7\n\t"
-					  "fmoveml %1,%%fpcr/%%fpsr/%%fpiar\n\t"
-					  ".chip 68k"
-					  : /* no outputs */
-					  : "m" (*fpregs.f_fpregs),
-					    "m" (*fpregs.f_fpcntl));
-		}
+		__asm__ volatile (".chip 68k/68881\n\t"
+				  "fmovemx %0,%%fp0-%%fp7\n\t"
+				  "fmoveml %1,%%fpcr/%%fpsr/%%fpiar\n\t"
+				  ".chip 68k"
+				  : /* no outputs */
+				  : "m" (*fpregs.f_fpregs),
+				    "m" (*fpregs.f_fpcntl));
 	}
 	if (context_size &&
 	    __copy_from_user(fpstate + 4, (long __user *)&uc->uc_fpstate + 1,
 			     context_size))
 		goto out;
 
-	if (CPU_IS_COLDFIRE) {
-		__asm__ volatile ("frestore %0" : : "m" (*fpstate));
-	} else {
-		__asm__ volatile (".chip 68k/68881\n\t"
-				  "frestore %0\n\t"
-				  ".chip 68k"
-				  : : "m" (*fpstate));
-	}
+	__asm__ volatile (".chip 68k/68881\n\t"
+			  "frestore %0\n\t"
+			  ".chip 68k"
+			  : : "m" (*fpstate));
 	err = 0;
 
 out:
@@ -429,22 +325,11 @@ out:
  */
 static inline void save_fpu_state(struct sigcontext *sc, struct pt_regs *regs)
 {
-	if (FPU_IS_EMU) {
-		/* save registers */
-		memcpy(sc->sc_fpcntl, current->thread.fpcntl, 12);
-		memcpy(sc->sc_fpregs, current->thread.fp, 24);
-		return;
-	}
 
-	if (CPU_IS_COLDFIRE) {
-		__asm__ volatile ("fsave %0"
-				  : : "m" (*sc->sc_fpstate) : "memory");
-	} else {
-		__asm__ volatile (".chip 68k/68881\n\t"
-				  "fsave %0\n\t"
-				  ".chip 68k"
-				  : : "m" (*sc->sc_fpstate) : "memory");
-	}
+	__asm__ volatile (".chip 68k/68881\n\t"
+			  "fsave %0\n\t"
+			  ".chip 68k"
+			  : : "m" (*sc->sc_fpstate) : "memory");
 
 	if (CPU_IS_060 ? sc->sc_fpstate[2] : sc->sc_fpstate[0]) {
 		fpu_version = sc->sc_fpstate[0];
@@ -456,59 +341,33 @@ static inline void save_fpu_state(struct sigcontext *sc, struct pt_regs *regs)
 				sc->sc_fpstate[0x38] |= 1 << 3;
 		}
 
-		if (CPU_IS_COLDFIRE) {
-			__asm__ volatile ("fmovemd %%fp0-%%fp1,%0\n\t"
-					  "fmovel %%fpcr,%1\n\t"
-					  "fmovel %%fpsr,%2\n\t"
-					  "fmovel %%fpiar,%3"
-					  : "=m" (sc->sc_fpregs[0]),
-					    "=m" (sc->sc_fpcntl[0]),
-					    "=m" (sc->sc_fpcntl[1]),
-					    "=m" (sc->sc_fpcntl[2])
-					  : /* no inputs */
-					  : "memory");
-		} else {
-			__asm__ volatile (".chip 68k/68881\n\t"
-					  "fmovemx %%fp0-%%fp1,%0\n\t"
-					  "fmoveml %%fpcr/%%fpsr/%%fpiar,%1\n\t"
-					  ".chip 68k"
-					  : "=m" (*sc->sc_fpregs),
-					    "=m" (*sc->sc_fpcntl)
-					  : /* no inputs */
-					  : "memory");
-		}
+		__asm__ volatile (".chip 68k/68881\n\t"
+				  "fmovemx %%fp0-%%fp1,%0\n\t"
+				  "fmoveml %%fpcr/%%fpsr/%%fpiar,%1\n\t"
+				  ".chip 68k"
+				  : "=m" (*sc->sc_fpregs),
+				    "=m" (*sc->sc_fpcntl)
+				  : /* no inputs */
+				  : "memory");
 	}
 }
 
 static inline int rt_save_fpu_state(struct ucontext __user *uc, struct pt_regs *regs)
 {
 	unsigned char fpstate[FPCONTEXT_SIZE];
-	int context_size = CPU_IS_060 ? 8 : (CPU_IS_COLDFIRE ? 12 : 0);
+	int context_size = CPU_IS_060 ? 8 : 0;
 	int err = 0;
 
-	if (FPU_IS_EMU) {
-		/* save fpu control register */
-		err |= copy_to_user(uc->uc_mcontext.fpregs.f_fpcntl,
-				current->thread.fpcntl, 12);
-		/* save all other fpu register */
-		err |= copy_to_user(uc->uc_mcontext.fpregs.f_fpregs,
-				current->thread.fp, 96);
-		return err;
-	}
-
-	if (CPU_IS_COLDFIRE) {
-		__asm__ volatile ("fsave %0" : : "m" (*fpstate) : "memory");
-	} else {
-		__asm__ volatile (".chip 68k/68881\n\t"
-				  "fsave %0\n\t"
-				  ".chip 68k"
-				  : : "m" (*fpstate) : "memory");
-	}
+	__asm__ volatile (".chip 68k/68881\n\t"
+			  "fsave %0\n\t"
+			  ".chip 68k"
+			  : : "m" (*fpstate) : "memory");
 
 	err |= __put_user(*(long *)fpstate, (long __user *)&uc->uc_fpstate);
+
 	if (CPU_IS_060 ? fpstate[2] : fpstate[0]) {
 		fpregset_t fpregs;
-		if (!(CPU_IS_060 || CPU_IS_COLDFIRE))
+		if (!(CPU_IS_060))
 			context_size = fpstate[1];
 		fpu_version = fpstate[0];
 		if (CPU_IS_020_OR_030 &&
@@ -518,27 +377,16 @@ static inline int rt_save_fpu_state(struct ucontext __user *uc, struct pt_regs *
 			if (*(unsigned short *) fpstate == 0x1f38)
 				fpstate[0x38] |= 1 << 3;
 		}
-		if (CPU_IS_COLDFIRE) {
-			__asm__ volatile ("fmovemd %%fp0-%%fp7,%0\n\t"
-					  "fmovel %%fpcr,%1\n\t"
-					  "fmovel %%fpsr,%2\n\t"
-					  "fmovel %%fpiar,%3"
-					  : "=m" (fpregs.f_fpregs[0]),
-					    "=m" (fpregs.f_fpcntl[0]),
-					    "=m" (fpregs.f_fpcntl[1]),
-					    "=m" (fpregs.f_fpcntl[2])
-					  : /* no inputs */
-					  : "memory");
-		} else {
-			__asm__ volatile (".chip 68k/68881\n\t"
-					  "fmovemx %%fp0-%%fp7,%0\n\t"
-					  "fmoveml %%fpcr/%%fpsr/%%fpiar,%1\n\t"
-					  ".chip 68k"
-					  : "=m" (*fpregs.f_fpregs),
-					    "=m" (*fpregs.f_fpcntl)
-					  : /* no inputs */
-					  : "memory");
-		}
+
+		__asm__ volatile (".chip 68k/68881\n\t"
+				  "fmovemx %%fp0-%%fp7,%0\n\t"
+				  "fmoveml %%fpcr/%%fpsr/%%fpiar,%1\n\t"
+				  ".chip 68k"
+				  : "=m" (*fpregs.f_fpregs),
+				    "=m" (*fpregs.f_fpcntl)
+				  : /* no inputs */
+				  : "memory");
+
 		err |= copy_to_user(&uc->uc_mcontext.fpregs, &fpregs,
 				    sizeof(fpregs));
 	}
@@ -547,32 +395,6 @@ static inline int rt_save_fpu_state(struct ucontext __user *uc, struct pt_regs *
 				    context_size);
 	return err;
 }
-
-#else /* CONFIG_FPU */
-
-/*
- * For the case with no FPU configured these all do nothing.
- */
-static inline int restore_fpu_state(struct sigcontext *sc)
-{
-	return 0;
-}
-
-static inline int rt_restore_fpu_state(struct ucontext __user *uc)
-{
-	return 0;
-}
-
-static inline void save_fpu_state(struct sigcontext *sc, struct pt_regs *regs)
-{
-}
-
-static inline int rt_save_fpu_state(struct ucontext __user *uc, struct pt_regs *regs)
-{
-	return 0;
-}
-
-#endif /* CONFIG_FPU */
 
 static inline void siginfo_build_tests(void)
 {
@@ -662,10 +484,6 @@ static int mangle_kernel_stack(struct pt_regs *regs, int formatvec,
 		regs->vector = formatvec & 0xfff;
 #define frame_offset (sizeof(struct pt_regs)+sizeof(struct switch_stack))
 		__asm__ __volatile__ (
-#ifdef CONFIG_COLDFIRE
-			 "   movel %0,%/sp\n\t"
-			 "   bra ret_from_signal\n"
-#else
 			 "   movel %0,%/a0\n\t"
 			 "   subl %1,%/a0\n\t"     /* make room on stack */
 			 "   movel %/a0,%/sp\n\t"  /* set stack pointer */
@@ -679,7 +497,6 @@ static int mangle_kernel_stack(struct pt_regs *regs, int formatvec,
 			 "2: movel %4@+,%/a0@+\n\t"
 			 "   dbra %1,2b\n\t"
 			 "   bral ret_from_signal\n"
-#endif
 			 : /* no outputs, it doesn't ever return */
 			 : "a" (sw), "d" (fsize), "d" (frame_offset/4-1),
 			   "n" (frame_offset), "a" (buf + fsize/4)
@@ -840,7 +657,6 @@ static void setup_sigcontext(struct sigcontext *sc, struct pt_regs *regs,
 	sc->sc_sr = regs->sr;
 	sc->sc_pc = regs->pc;
 	sc->sc_formatvec = regs->format << 12 | regs->vector;
-	save_a5_state(sc, regs);
 	save_fpu_state(sc, regs);
 }
 
@@ -914,14 +730,10 @@ static int setup_frame(struct ksignal *ksig, sigset_t *set,
 	err |= copy_to_user (&frame->sc, &context, sizeof(context));
 
 	/* Set up to return from userspace.  */
-#ifdef CONFIG_MMU
 	err |= __put_user(frame->retcode, &frame->pretcode);
 	/* moveq #,d0; trap #0 */
 	err |= __put_user(0x70004e40 + (__NR_sigreturn << 16),
 			  (long __user *)(frame->retcode));
-#else
-	err |= __put_user((void *) ret_from_user_signal, &frame->pretcode);
-#endif
 
 	if (err)
 		return -EFAULT;
@@ -934,7 +746,6 @@ static int setup_frame(struct ksignal *ksig, sigset_t *set,
 	 */
 	wrusp ((unsigned long) frame);
 	regs->pc = (unsigned long) ksig->ka.sa.sa_handler;
-	adjustformat(regs);
 
 	/*
 	 * This is subtle; if we build more than one sigframe, all but the
@@ -990,22 +801,11 @@ static int setup_rt_frame(struct ksignal *ksig, sigset_t *set,
 	err |= copy_to_user (&frame->uc.uc_sigmask, set, sizeof(*set));
 
 	/* Set up to return from userspace.  */
-#ifdef CONFIG_MMU
 	err |= __put_user(frame->retcode, &frame->pretcode);
-#ifdef __mcoldfire__
-	/* movel #__NR_rt_sigreturn,d0; trap #0 */
-	err |= __put_user(0x203c0000, (long __user *)(frame->retcode + 0));
-	err |= __put_user(0x00004e40 + (__NR_rt_sigreturn << 16),
-			  (long __user *)(frame->retcode + 4));
-#else
 	/* moveq #,d0; notb d0; trap #0 */
 	err |= __put_user(0x70004600 + ((__NR_rt_sigreturn ^ 0xff) << 16),
 			  (long __user *)(frame->retcode + 0));
 	err |= __put_user(0x4e40, (short __user *)(frame->retcode + 4));
-#endif
-#else
-	err |= __put_user((void *) ret_from_user_rt_signal, &frame->pretcode);
-#endif /* CONFIG_MMU */
 
 	if (err)
 		return -EFAULT;
@@ -1018,7 +818,6 @@ static int setup_rt_frame(struct ksignal *ksig, sigset_t *set,
 	 */
 	wrusp ((unsigned long) frame);
 	regs->pc = (unsigned long) ksig->ka.sa.sa_handler;
-	adjustformat(regs);
 
 	/*
 	 * This is subtle; if we build more than one sigframe, all but the

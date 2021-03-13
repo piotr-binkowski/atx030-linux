@@ -22,8 +22,6 @@
 #include <asm/pgalloc.h>
 #include <asm/io.h>
 
-#undef DEBUG
-
 #define PTRTREESIZE	(256*1024)
 
 /*
@@ -119,21 +117,6 @@ void __iomem *__ioremap(unsigned long physaddr, unsigned long size, int cachefla
 	if (!size || physaddr > (unsigned long)(-size))
 		return NULL;
 
-#ifdef CONFIG_AMIGA
-	if (MACH_IS_AMIGA) {
-		if ((physaddr >= 0x40000000) && (physaddr + size < 0x60000000)
-		    && (cacheflag == IOMAP_NOCACHE_SER))
-			return (void __iomem *)physaddr;
-	}
-#endif
-#ifdef CONFIG_COLDFIRE
-	if (__cf_internalio(physaddr))
-		return (void __iomem *) physaddr;
-#endif
-
-#ifdef DEBUG
-	printk("ioremap: 0x%lx,0x%lx(%d) - ", physaddr, size, cacheflag);
-#endif
 	/*
 	 * Mappings have to be aligned
 	 */
@@ -150,9 +133,6 @@ void __iomem *__ioremap(unsigned long physaddr, unsigned long size, int cachefla
 
 	virtaddr = (unsigned long)area->addr;
 	retaddr = virtaddr + offset;
-#ifdef DEBUG
-	printk("0x%lx,0x%lx,0x%lx", physaddr, virtaddr, retaddr);
-#endif
 
 	/*
 	 * add cache and table flags to physical address
@@ -191,10 +171,6 @@ void __iomem *__ioremap(unsigned long physaddr, unsigned long size, int cachefla
 	}
 
 	while ((long)size > 0) {
-#ifdef DEBUG
-		if (!(virtaddr & (PTRTREESIZE-1)))
-			printk ("\npa=%#lx va=%#lx ", physaddr, virtaddr);
-#endif
 		pgd_dir = pgd_offset_k(virtaddr);
 		pmd_dir = pmd_alloc(&init_mm, pgd_dir, virtaddr);
 		if (!pmd_dir) {
@@ -220,9 +196,6 @@ void __iomem *__ioremap(unsigned long physaddr, unsigned long size, int cachefla
 			size -= PAGE_SIZE;
 		}
 	}
-#ifdef DEBUG
-	printk("\n");
-#endif
 	flush_tlb_all();
 
 	return (void __iomem *)retaddr;
@@ -234,18 +207,7 @@ EXPORT_SYMBOL(__ioremap);
  */
 void iounmap(void __iomem *addr)
 {
-#ifdef CONFIG_AMIGA
-	if ((!MACH_IS_AMIGA) ||
-	    (((unsigned long)addr < 0x40000000) ||
-	     ((unsigned long)addr > 0x60000000)))
-			free_io_area((__force void *)addr);
-#else
-#ifdef CONFIG_COLDFIRE
-	if (cf_internalio(addr))
-		return;
-#endif
 	free_io_area((__force void *)addr);
-#endif
 }
 EXPORT_SYMBOL(iounmap);
 

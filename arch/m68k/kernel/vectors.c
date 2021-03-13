@@ -31,17 +31,8 @@
 asmlinkage void system_call(void);
 asmlinkage void buserr(void);
 asmlinkage void trap(void);
-asmlinkage void nmihandler(void);
-#ifdef CONFIG_M68KFPU_EMU
-asmlinkage void fpu_emu(void);
-#endif
 
 e_vector vectors[256];
-
-/* nmi handler for the Amiga */
-asm(".text\n"
-    __ALIGN_STR "\n"
-    "nmihandler: rte");
 
 /*
  * this must be called very early as the kernel might
@@ -50,12 +41,6 @@ asm(".text\n"
  */
 void __init base_trap_init(void)
 {
-	if (MACH_IS_SUN3X) {
-		extern e_vector *sun3x_prom_vbr;
-
-		__asm__ volatile ("movec %%vbr, %0" : "=r" (sun3x_prom_vbr));
-	}
-
 	/* setup the exception vector table */
 	__asm__ volatile ("movec %0,%%vbr" : : "r" ((void*)vectors));
 
@@ -85,12 +70,7 @@ void __init trap_init (void)
 	for (i = VEC_USER; i < 256; i++)
 		vectors[i] = bad_inthandler;
 
-#ifdef CONFIG_M68KFPU_EMU
-	if (FPU_IS_EMU)
-		vectors[VEC_LINE11] = fpu_emu;
-#endif
-
-	if (CPU_IS_040 && !FPU_IS_EMU) {
+	if (CPU_IS_040) {
 		/* set up FPSP entry points */
 		asmlinkage void dz_vec(void) asm ("dz");
 		asmlinkage void inex_vec(void) asm ("inex");
@@ -113,7 +93,7 @@ void __init trap_init (void)
 		vectors[VEC_FPUNSUP] = unsupp_vec;
 	}
 
-	if (CPU_IS_060 && !FPU_IS_EMU) {
+	if (CPU_IS_060) {
 		/* set up IFPSP entry points */
 		asmlinkage void snan_vec6(void) asm ("_060_fpsp_snan");
 		asmlinkage void operr_vec6(void) asm ("_060_fpsp_operr");
@@ -134,11 +114,6 @@ void __init trap_init (void)
 		vectors[VEC_LINE11] = fline_vec6;
 		vectors[VEC_FPUNSUP] = unsupp_vec6;
 		vectors[VEC_UNIMPEA] = effadd_vec6;
-	}
-
-        /* if running on an amiga, make the NMI interrupt do nothing */
-	if (MACH_IS_AMIGA) {
-		vectors[VEC_INT7] = nmihandler;
 	}
 }
 
