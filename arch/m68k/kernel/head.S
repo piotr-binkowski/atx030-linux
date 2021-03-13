@@ -240,11 +240,7 @@ ROOT_INDEX_SHIFT = 25
 PTR_INDEX_SHIFT  = 18
 PAGE_INDEX_SHIFT = 12
 
-#ifdef __STDC__
 #define L(name) .L##name
-#else
-#define L(name) .L/**/name
-#endif
 
 /* The __INITDATA stuff is a no-op when ftrace or kgdb are turned on */
 #ifndef __INITDATA

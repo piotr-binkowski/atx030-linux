@@ -48,8 +48,8 @@ static void wb_uart_enable_ms(struct uart_port *port)
 
 static void wb_uart_putchar(struct uart_port *port, int ch)
 {
-	while(ioread8(port->mapbase + WB_UART_STATUS) & WB_UART_FULL);
-	iowrite8(ch, port->mapbase + WB_UART_DATA);
+	while(ioread8(port->membase + WB_UART_STATUS) & WB_UART_FULL);
+	iowrite8(ch, port->membase + WB_UART_DATA);
 }
 
 static void wb_uart_start_tx(struct uart_port *port)
@@ -73,9 +73,9 @@ static irqreturn_t wb_uart_irq_handler(int irq, void *dev_id)
 {
 	struct uart_port *port = dev_id;
 
-	if(!(ioread8(port->mapbase + WB_UART_STATUS) & WB_UART_EMPTY)) {
-		while(!(ioread8(port->mapbase + WB_UART_STATUS) & WB_UART_EMPTY)) {
-			char c = ioread8(port->mapbase + WB_UART_DATA);
+	if(!(ioread8(port->membase + WB_UART_STATUS) & WB_UART_EMPTY)) {
+		while(!(ioread8(port->membase + WB_UART_STATUS) & WB_UART_EMPTY)) {
+			char c = ioread8(port->membase + WB_UART_DATA);
 			port->icount.rx++;
 			uart_insert_char(port, 0, 0, c, TTY_NORMAL);
 		}
@@ -111,7 +111,7 @@ static int wb_uart_startup(struct uart_port *port)
 	INFO();
 
 	ret = request_irq(port->irq, wb_uart_irq_handler, IRQF_SHARED, DRIVER_NAME, port);
-	iowrite8(WB_UART_IE, port->mapbase + WB_UART_STATUS);
+	iowrite8(WB_UART_IE, port->membase + WB_UART_STATUS);
 
 	return ret;
 }
@@ -120,7 +120,7 @@ static void wb_uart_shutdown(struct uart_port *port)
 {
 	INFO();
 
-	iowrite8(0x00, port->mapbase + WB_UART_STATUS);
+	iowrite8(0x00, port->membase + WB_UART_STATUS);
 	free_irq(port->irq, port);
 }
 
@@ -247,20 +247,19 @@ static int wb_uart_resume(struct platform_device *pdev)
 
 static int wb_uart_probe(struct platform_device *pdev)
 {
-	struct resource *r_mem, *r_irq;
 	struct uart_port *port;
-	int i;
+	struct resource *res;
 
 	INFO();
 
-	r_mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	r_irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 
 	console_port = &ports[0];
 
 	port = &ports[0];
-	port->mapbase = r_mem->start;
-	port->irq = r_irq->start;
+	port->mapbase = res->start;
+	port->membase = ioremap(port->mapbase, 0x100);
+	port->irq = platform_get_irq(pdev, 0);
 	port->uartclk = 1843200;
 	port->iotype = UPIO_MEM;
 	port->flags = UPF_BOOT_AUTOCONF;
