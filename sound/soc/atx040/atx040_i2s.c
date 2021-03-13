@@ -60,15 +60,12 @@ static struct snd_pcm_hardware atx040_i2s_hw = {
 	.buffer_bytes_max = BUF_BYTES,
 	.period_bytes_min = PERIOD_BYTES,
 	.period_bytes_max = PERIOD_BYTES,
-	.periods_min      = 1,
+	.periods_min      = 32,
 	.periods_max      = PERIODS_MAX,
 };
 
 static int atx040_i2s_fill_fifo(struct atx040_i2s_priv *priv, const u16 *buf, const int len) {
-	int i;
-	for (i = 0; i < len; i++) {
-		__raw_writew(*buf++, priv->base + ATX040_I2S_DATA);
-	}
+	raw_outsw(priv->base + ATX040_I2S_DATA, buf, len);
 	return len;
 }
 
@@ -221,9 +218,9 @@ static int atx040_i2s_new_pcm(struct atx040_i2s_priv *priv)
 
 static int atx040_i2s_probe(struct platform_device *pdev)
 {
-	struct resource *r_mem, *r_irq;
 	struct atx040_i2s_priv *priv;
 	struct snd_card *card;
+	struct resource *res;
 	int ret;
 
 	ret = snd_card_new(&pdev->dev, 0, NULL, THIS_MODULE, sizeof(*priv), &card);
@@ -250,11 +247,10 @@ static int atx040_i2s_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	r_mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	r_irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 
-	priv->base = (void*)r_mem->start;
-	priv->irq  = r_irq->start;
+	priv->base = devm_ioremap_resource(&pdev->dev, res);
+	priv->irq  = platform_get_irq(pdev, 0);
 	ret = request_irq(priv->irq, atx040_i2s_irq_handler, IRQF_SHARED, DRIVER_NAME, priv);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to request interrupt\n");
