@@ -64,8 +64,6 @@ static inline void clear_page(void *page)
 
 extern unsigned long m68k_memoffset;
 
-#ifndef CONFIG_SUN3
-
 #define WANT_PAGE_VIRTUAL
 
 static inline unsigned long ___pa(void *vaddr)
@@ -89,31 +87,6 @@ static inline void *__va(unsigned long paddr)
 		: "0" (paddr), "i" (m68k_fixup_memoffset));
 	return vaddr;
 }
-
-#else	/* !CONFIG_SUN3 */
-/* This #define is a horrible hack to suppress lots of warnings. --m */
-#define __pa(x) ___pa((unsigned long)(x))
-static inline unsigned long ___pa(unsigned long x)
-{
-     if(x == 0)
-	  return 0;
-     if(x >= PAGE_OFFSET)
-        return (x-PAGE_OFFSET);
-     else
-        return (x+0x2000000);
-}
-
-static inline void *__va(unsigned long x)
-{
-     if(x == 0)
-	  return (void *)0;
-
-     if(x < 0x2000000)
-        return (void *)(x+PAGE_OFFSET);
-     else
-        return (void *)(x-0x2000000);
-}
-#endif	/* CONFIG_SUN3 */
 
 /*
  * NOTE: virtual isn't really correct, actually it should be the offset into the
