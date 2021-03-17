@@ -13,7 +13,7 @@
 
 #define WB_SPI_RX_EMPTY		0x02
 #define WB_SPI_TX_FULL		0x04
-#define WB_SPI_FIFO_DEPTH	1024
+#define WB_SPI_FIFO_DEPTH	16
 
 struct wb_spi {
 	struct spi_bitbang bitbang;
