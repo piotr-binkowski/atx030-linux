@@ -10,13 +10,13 @@ extern void __init atx040_init_IRQ(void);
 
 static struct resource wb_uart_res[] = {
 	{
-		.start = ATX040_WB_UART_BASE,
-		.end = ATX040_WB_UART_BASE + 16,
+		.start = ATX040_UART_BASE,
+		.end = ATX040_UART_BASE + 16,
 		.flags = IORESOURCE_MEM,
 	},
 	{
-		.start = ATX040_WB_UART_IRQ,
-		.end = ATX040_WB_UART_IRQ,
+		.start = ATX040_UART_IRQ,
+		.end = ATX040_UART_IRQ,
 		.flags = IORESOURCE_IRQ,
 	},
 };
