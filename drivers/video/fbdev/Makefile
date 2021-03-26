@@ -68,6 +68,7 @@ obj-$(CONFIG_FB_APOLLO)           += dnfb.o
 obj-$(CONFIG_FB_Q40)              += q40fb.o
 obj-$(CONFIG_FB_SBC030)           += sbc030fb.o
 obj-$(CONFIG_FB_ATX030)           += atx030fb.o
+obj-$(CONFIG_FB_ATX040)           += atx040fb.o
 obj-$(CONFIG_FB_TGA)              += tgafb.o
 obj-$(CONFIG_FB_HP300)            += hpfb.o
 obj-$(CONFIG_FB_G364)             += g364fb.o

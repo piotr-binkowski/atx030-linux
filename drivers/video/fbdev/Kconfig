@@ -411,6 +411,13 @@ config FB_ATX030
 	select FB_CFB_COPYAREA
 	select FB_CFB_IMAGEBLIT
 
+config FB_ATX040
+	bool "ATX040 FB"
+	depends on FB && ATX040
+	select FB_CFB_FILLRECT
+	select FB_CFB_COPYAREA
+	select FB_CFB_IMAGEBLIT
+
 config FB_AMIGA
 	tristate "Amiga native chipset support"
 	depends on FB && AMIGA
