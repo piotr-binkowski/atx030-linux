@@ -26,6 +26,8 @@
 #include <linux/module.h>
 #include <linux/initrd.h>
 
+#include <linux/of_fdt.h>
+
 #include <asm/bootinfo.h>
 #include <asm/byteorder.h>
 #include <asm/sections.h>
@@ -63,6 +65,8 @@ EXPORT_SYMBOL(m68k_memory);
 
 static struct m68k_mem_info m68k_ramdisk __initdata;
 
+static struct m68k_mem_info m68k_device_tree __initdata;
+
 static char m68k_command_line[CL_SIZE] __initdata;
 
 void (*mach_sched_init) (irq_handler_t handler) __initdata = NULL;
@@ -91,6 +95,9 @@ extern void config_atx040(void);
 #define MASK_256K 0xfffc0000
 
 extern void paging_init(void);
+
+unsigned long fdt_start = 0;
+unsigned long fdt_end = 0;
 
 static void __init m68k_parse_bootinfo(const struct bi_record *record)
 {
@@ -133,6 +140,14 @@ static void __init m68k_parse_bootinfo(const struct bi_record *record)
 		case BI_COMMAND_LINE:
 			strlcpy(m68k_command_line, data,
 				sizeof(m68k_command_line));
+			break;
+
+		case BI_DEVICE_TREE:
+			{
+				const struct mem_info *m = data;
+				m68k_device_tree.addr = be32_to_cpu(m->addr);
+				m68k_device_tree.size = be32_to_cpu(m->size);
+			}
 			break;
 
 		default:
@@ -223,5 +238,14 @@ void __init setup_arch(char **cmdline_p)
 		pr_info("initrd: %08lx - %08lx\n", initrd_start, initrd_end);
 	}
 #endif
+	if (m68k_device_tree.size) {
+		memblock_reserve(m68k_device_tree.addr, m68k_device_tree.size);
+		fdt_start = (unsigned long)phys_to_virt(m68k_device_tree.addr);
+		fdt_end = fdt_start + m68k_device_tree.size;
+		pr_info("fdt: %08lx - %08lx\n", fdt_start, fdt_end);
+		if(!early_init_dt_scan(__va(fdt_start)))
+			pr_warn("early_init_dt_scan failed\n");
+	}
 
+	unflatten_device_tree();
 }

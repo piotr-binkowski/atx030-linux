@@ -64,6 +64,8 @@ struct mem_info {
 					/* (struct mem_info) */
 #define BI_COMMAND_LINE		0x0007	/* kernel command line parameters */
 					/* (string) */
+#define BI_DEVICE_TREE		0x0008	/* fdt address and size */
+					/* (struct mem_info) */
 
 
     /*
