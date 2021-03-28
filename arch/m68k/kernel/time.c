@@ -30,6 +30,9 @@
 #include <linux/timex.h>
 #include <linux/profile.h>
 
+#include <linux/clocksource.h>
+#include <linux/of_clk.h>
+
 
 unsigned long (*mach_random_get_entropy)(void);
 EXPORT_SYMBOL_GPL(mach_random_get_entropy);
@@ -129,4 +132,6 @@ module_init(rtc_init);
 void __init time_init(void)
 {
 	mach_sched_init(timer_interrupt);
+	of_clk_init(NULL);
+	timer_probe();
 }

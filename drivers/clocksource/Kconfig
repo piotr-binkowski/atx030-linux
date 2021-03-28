@@ -634,4 +634,8 @@ config GX6605S_TIMER
 	help
 	  This option enables support for gx6605s SOC's timer.
 
+config WB_TIMER
+	bool "WB Timer system driver"
+	select TIMER_OF
+
 endmenu
