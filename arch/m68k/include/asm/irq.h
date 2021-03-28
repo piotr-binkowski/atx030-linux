@@ -39,9 +39,9 @@ extern void m68k_setup_irq_controller(struct irq_chip *,
 				      void (*handle)(struct irq_desc *desc),
 				      unsigned int irq, unsigned int cnt);
 
-extern unsigned int irq_canonicalize(unsigned int irq);
-
 asmlinkage void do_IRQ(int irq, struct pt_regs *regs);
 extern atomic_t irq_err_count;
+
+#include <asm-generic/irq.h>
 
 #endif /* _M68K_IRQ_H_ */

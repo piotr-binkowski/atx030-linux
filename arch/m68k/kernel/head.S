@@ -170,9 +170,6 @@
 #include <asm/pgtable.h>
 #include <asm/page.h>
 #include <asm/asm-offsets.h>
-#ifdef CONFIG_ATX040
-#  include <asm/atx040hw.h>
-#endif
 
 .globl kernel_pg_dir
 .globl availmem
@@ -308,7 +305,6 @@ L(\name):
 .endm
 
 func_define	mmu_map,4
-func_define	mmu_map_tt,4
 func_define	mmu_fixup_page_mmu_cache,1
 func_define	mmu_temp_map,2
 func_define	mmu_engage
@@ -573,81 +569,9 @@ L(mmu_fixup):
 
 L(mmu_fixup_done):
 
-/*
- * mmu_engage
- *
- * This chunk of code performs the gruesome task of engaging the MMU.
- * The reason its gruesome is because when the MMU becomes engaged it
- * maps logical addresses to physical addresses.  The Program Counter
- * register is then passed through the MMU before the next instruction
- * is fetched (the instruction following the engage MMU instruction).
- * This may mean one of two things:
- * 1. The Program Counter falls within the logical address space of
- *    the kernel of which there are two sub-possibilities:
- *    A. The PC maps to the correct instruction (logical PC == physical
- *       code location), or
- *    B. The PC does not map through and the processor will read some
- *       data (or instruction) which is not the logically next instr.
- *    As you can imagine, A is good and B is bad.
- * Alternatively,
- * 2. The Program Counter does not map through the MMU.  The processor
- *    will take a Bus Error.
- * Clearly, 2 is bad.
- * It doesn't take a wiz kid to figure you want 1.A.
- * This code creates that possibility.
- * There are two possible 1.A. states (we now ignore the other above states):
- * A. The kernel is located at physical memory addressed the same as
- *    the logical memory for the kernel, i.e., 0x01000.
- * B. The kernel is located some where else.  e.g., 0x0400.0000
- *
- *    Under some conditions the Macintosh can look like A or B.
- * [A friend and I once noted that Apple hardware engineers should be
- * wacked twice each day: once when they show up at work (as in, Whack!,
- * "This is for the screwy hardware we know you're going to design today."),
- * and also at the end of the day (as in, Whack! "I don't know what
- * you designed today, but I'm sure it wasn't good."). -- rst]
- *
- * This code works on the following premise:
- * If the kernel start (%d5) is within the first 16 Meg of RAM,
- * then create a mapping for the kernel at logical 0x8000.0000 to
- * the physical location of the pc.  And, create a transparent
- * translation register for the first 16 Meg.  Then, after the MMU
- * is engaged, the PC can be moved up into the 0x8000.0000 range
- * and then the transparent translation can be turned off and then
- * the PC can jump to the correct logical location and it will be
- * home (finally).  This is essentially the code that the Amiga used
- * to use.  Now, it's generalized for all processors.  Which means
- * that a fresh (but temporary) mapping has to be created.  The mapping
- * is made in page 0 (an as of yet unused location -- except for the
- * stack!).  This temporary mapping will only require 1 pointer table
- * and a single page table (it can map 256K).
- *
- * OK, alternatively, imagine that the Program Counter is not within
- * the first 16 Meg.  Then, just use Transparent Translation registers
- * to do the right thing.
- *
- * Last, if _start is already at 0x01000, then there's nothing special
- * to do (in other words, in a degenerate case of the first case above,
- * do nothing).
- *
- * Let's do it.
- *
- *
- */
-
 	mmu_engage
 
-/*
- * After this point no new memory is allocated and
- * the start of available memory is stored in availmem.
- * (The bootmem allocator requires now the physicall address.)
- */
-
 	movel	L(memory_start),availmem
-
-/*
- * Enable caches
- */
 
 	is_not_040_or_060(L(cache_not_680460))
 
@@ -660,13 +584,11 @@ L(cache680460):
 	is_060(L(cache68060))
 
 	movel	#CC6_ENABLE_D+CC6_ENABLE_I,%d0
-	/* MMU stuff works in copyback mode now, so enable the cache */
 	movec	%d0,%cacr
 	jra	L(cache_done)
 
 L(cache68060):
 	movel	#CC6_ENABLE_D+CC6_ENABLE_I+CC6_ENABLE_SB+CC6_PUSH_DPI+CC6_ENABLE_B+CC6_CLRA_B,%d0
-	/* MMU stuff works in copyback mode now, so enable the cache */
 	movec	%d0,%cacr
 	/* enable superscalar dispatch in PCR */
 	moveq	#1,%d0
@@ -684,20 +606,12 @@ L(cache68030):
 	.chip	68k
 L(cache_done):
 
-/*
- * Setup initial stack pointer
- */
 	lea	init_task,%curptr
 	lea	init_thread_union+THREAD_SIZE,%sp
 
 	subl	%a6,%a6		/* clear a6 for gdb */
 
-/*
- * The new 64bit printf support requires an early exception initialization.
- */
 	jbsr	base_trap_init
-
-/* jump to the kernel start */
 
 	jbsr	start_kernel
 
@@ -788,90 +702,6 @@ func_return	get_bi_record
  *
  *
  */
-
-/*
- * mmu_map_tt
- *
- * This is a specific function which works on all 680x0 machines.
- * On 030, 040 & 060 it will attempt to use Transparent Translation
- * registers (tt1).
- * On 020 it will call the standard mmu_map which will use early
- * terminating descriptors.
- */
-func_start	mmu_map_tt,%d0/%d1/%a0,4
-
-	is_020(L(do_map))
-
-	/* Extract the highest bit set
-	 */
-	bfffo	ARG3{#0,#32},%d1
-	cmpw	#8,%d1
-	jcc	L(do_map)
-
-	/* And get the mask
-	 */
-	moveq	#-1,%d0
-	lsrl	%d1,%d0
-	lsrl	#1,%d0
-
-	/* Mask the address
-	 */
-	movel	%d0,%d1
-	notl	%d1
-	andl	ARG2,%d1
-
-	/* Generate the upper 16bit of the tt register
-	 */
-	lsrl	#8,%d0
-	orl	%d0,%d1
-	clrw	%d1
-
-	is_040_or_060(L(mmu_map_tt_040))
-
-	/* set 030 specific bits (read/write access for supervisor mode
-	 * (highest function code set, lower two bits masked))
-	 */
-	orw	#TTR_ENABLE+TTR_RWM+TTR_FCB2+TTR_FCM1+TTR_FCM0,%d1
-	movel	ARG4,%d0
-	btst	#6,%d0
-	jeq	1f
-	orw	#TTR_CI,%d1
-
-1:	lea	STACK,%a0
-	movel	%d1,%a0@
-	.chip	68030
-	tstl	ARG1
-	jne	1f
-	pmove	%a0@,%tt0
-	jra	2f
-1:	pmove	%a0@,%tt1
-2:	.chip	68k
-	jra	L(mmu_map_tt_done)
-
-	/* set 040 specific bits
-	 */
-L(mmu_map_tt_040):
-	orw	#TTR_ENABLE+TTR_KERNELMODE,%d1
-	orl	ARG4,%d1
-
-	.chip	68040
-	tstl	ARG1
-	jne	1f
-	movec	%d1,%itt0
-	movec	%d1,%dtt0
-	jra	2f
-1:	movec	%d1,%itt1
-	movec	%d1,%dtt1
-2:	.chip	68k
-
-	jra	L(mmu_map_tt_done)
-
-L(do_map):
-	mmu_map_eq	ARG2,ARG3,ARG4
-
-L(mmu_map_tt_done):
-
-func_return	mmu_map_tt
 
 /*
  *	mmu_map
