@@ -187,21 +187,6 @@ TC_ENABLE = 0x8000
 TC_PAGE8K = 0x4000
 TC_PAGE4K = 0x0000
 
-/* Transparent translation registers */
-TTR_ENABLE	= 0x8000	/* enable transparent translation */
-TTR_ANYMODE	= 0x4000	/* user and kernel mode access */
-TTR_KERNELMODE	= 0x2000	/* only kernel mode access */
-TTR_USERMODE	= 0x0000	/* only user mode access */
-TTR_CI		= 0x0400	/* inhibit cache */
-TTR_RW		= 0x0200	/* read/write mode */
-TTR_RWM		= 0x0100	/* read/write mask */
-TTR_FCB2	= 0x0040	/* function code base bit 2 */
-TTR_FCB1	= 0x0020	/* function code base bit 1 */
-TTR_FCB0	= 0x0010	/* function code base bit 0 */
-TTR_FCM2	= 0x0004	/* function code mask bit 2 */
-TTR_FCM1	= 0x0002	/* function code mask bit 1 */
-TTR_FCM0	= 0x0001	/* function code mask bit 0 */
-
 /* Cache Control registers */
 CC6_ENABLE_D	= 0x80000000	/* enable data cache (680[46]0) */
 CC6_FREEZE_D	= 0x40000000	/* freeze data cache (68060) */
